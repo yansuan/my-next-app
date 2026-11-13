@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+:root {
+  --bg-canvas: #06070a;
+  --signal-accent: #d4ff00;
+}
+
+:root[data-theme="pulse"] {
+  --signal-accent: #00f0ff;
+}
+
+body {
+  background-color: var(--bg-canvas);
+  color: #f4f4f5;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  overflow-x: hidden;
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 34s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
