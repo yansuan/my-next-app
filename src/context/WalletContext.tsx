@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export type AccentTheme = "lime" | "pulse";
 
@@ -59,7 +60,12 @@ export interface CheckoutPayload {
 }
 
 interface WalletContextValue {
+  userId: string | null;
   userEmail: string | null;
+  displayName: string;
+  avatarUrl: string | null;
+  authProvider: "google" | "email" | "workspace" | null;
+  memberSince: string | null;
   isSignedIn: boolean;
   availableCredits: number;
   reservedCredits: number;
@@ -72,8 +78,14 @@ interface WalletContextValue {
   jobs: JobRecord[];
   orders: UserOrderRecord[];
   toggleAccentTheme: () => void;
-  signInDemo: (email?: string) => void;
+  signInDemo: (email?: string, meta?: { displayName?: string; avatarUrl?: string | null; provider?: "google" | "email" | "workspace" }) => void;
   signOutDemo: () => void;
+  signInWithGoogle: (nextPath?: string) => Promise<{ ok: boolean; error?: string }>;
+  signOut: () => Promise<void>;
+  updateProfile: (updates: {
+    displayName?: string;
+    avatarUrl?: string | null;
+  }) => Promise<{ ok: boolean; error?: string }>;
   reserveCredits: (cost: number, note: string) => boolean;
   settleCredits: (cost: number, note: string) => void;
   refundCredits: (cost: number, note: string) => void;
@@ -87,7 +99,7 @@ interface WalletContextValue {
 
 const WalletContext = createContext<WalletContextValue | undefined>(undefined);
 
-const STORAGE_KEY = "reelmux_wallet_state_v2";
+const STORAGE_KEY = "reelmux_wallet_state_v3";
 
 const INITIAL_LEDGER: LedgerEntry[] = [
   {
@@ -120,7 +132,12 @@ const INITIAL_JOBS: JobRecord[] = [
 ];
 
 export function WalletProvider({ children }: { children: React.ReactNode }) {
-  const [userEmail, setUserEmail] = useState<string | null>("creator@reelmux.com");
+  const [userId, setUserId] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [displayName, setDisplayName] = useState<string>("");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [authProvider, setAuthProvider] = useState<"google" | "email" | "workspace" | null>(null);
+  const [memberSince, setMemberSince] = useState<string | null>(null);
   const [availableCredits, setAvailableCredits] = useState<number>(100);
   const [reservedCredits, setReservedCredits] = useState<number>(0);
   const [accentTheme, setAccentTheme] = useState<AccentTheme>("lime");
@@ -135,13 +152,18 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [orders, setOrders] = useState<UserOrderRecord[]>([]);
   const [hydrated, setHydrated] = useState(false);
 
-  // Hydrate from localStorage on client mount
+  // Hydrate from localStorage on client mount (defaults to signed-out for new visitors)
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
+        if (typeof parsed.userId !== "undefined") setUserId(parsed.userId);
         if (typeof parsed.userEmail !== "undefined") setUserEmail(parsed.userEmail);
+        if (typeof parsed.displayName === "string") setDisplayName(parsed.displayName);
+        if (typeof parsed.avatarUrl !== "undefined") setAvatarUrl(parsed.avatarUrl);
+        if (typeof parsed.authProvider !== "undefined") setAuthProvider(parsed.authProvider);
+        if (typeof parsed.memberSince !== "undefined") setMemberSince(parsed.memberSince);
         if (typeof parsed.availableCredits === "number")
           setAvailableCredits(parsed.availableCredits);
         if (typeof parsed.reservedCredits === "number")
@@ -162,6 +184,91 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // Sync real Supabase Auth session (Google OAuth / Email Magic Link) + profile metadata
+  useEffect(() => {
+    const supabase = createSupabaseBrowserClient();
+    if (!supabase) return;
+
+    const applySupabaseUser = async (
+      user: {
+        id: string;
+        email?: string;
+        created_at?: string;
+        app_metadata?: Record<string, unknown>;
+        user_metadata?: Record<string, unknown>;
+      } | null
+    ) => {
+      if (!user) return;
+      const meta = user.user_metadata || {};
+      const appMeta = user.app_metadata || {};
+      const provider = appMeta.provider === "google" ? "google" : "email";
+      const fallbackName =
+        (typeof meta.full_name === "string" && meta.full_name) ||
+        (typeof meta.name === "string" && meta.name) ||
+        (user.email ? user.email.split("@")[0] : "Creator");
+      const fallbackAvatar =
+        (typeof meta.avatar_url === "string" && meta.avatar_url) ||
+        (typeof meta.picture === "string" && meta.picture) ||
+        null;
+
+      setUserId(user.id);
+      setUserEmail(user.email ?? null);
+      setAuthProvider(provider);
+      setMemberSince(
+        user.created_at
+          ? new Date(user.created_at).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            })
+          : null
+      );
+      setDisplayName((prev) => prev || fallbackName);
+      setAvatarUrl((prev) => prev || fallbackAvatar);
+
+      try {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("display_name, avatar_url, balance_available, balance_reserved, plan_tier")
+          .eq("id", user.id)
+          .single();
+        if (profile) {
+          if (profile.display_name) setDisplayName(profile.display_name);
+          if (profile.avatar_url) setAvatarUrl(profile.avatar_url);
+          if (typeof profile.balance_available === "number")
+            setAvailableCredits(profile.balance_available);
+          if (typeof profile.balance_reserved === "number")
+            setReservedCredits(profile.balance_reserved);
+        }
+      } catch {
+        // Ignore profile lookup errors
+      }
+    };
+
+    supabase.auth.getUser().then(({ data }) => {
+      if (data?.user) {
+        applySupabaseUser(data.user);
+      }
+    });
+
+    const { data: subscription } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_OUT") {
+        setUserId(null);
+        setUserEmail(null);
+        setDisplayName("");
+        setAvatarUrl(null);
+        setAuthProvider(null);
+        setMemberSince(null);
+      } else if (session?.user) {
+        applySupabaseUser(session.user);
+      }
+    });
+
+    return () => {
+      subscription.subscription.unsubscribe();
+    };
+  }, []);
+
   // Persist to localStorage whenever state updates
   useEffect(() => {
     if (!hydrated) return;
@@ -169,7 +276,12 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem(
         STORAGE_KEY,
         JSON.stringify({
+          userId,
           userEmail,
+          displayName,
+          avatarUrl,
+          authProvider,
+          memberSince,
           availableCredits,
           reservedCredits,
           activePlanId,
@@ -186,7 +298,12 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     }
   }, [
     hydrated,
+    userId,
     userEmail,
+    displayName,
+    avatarUrl,
+    authProvider,
+    memberSince,
     availableCredits,
     reservedCredits,
     activePlanId,
@@ -206,12 +323,105 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     setAccentTheme((prev) => (prev === "lime" ? "pulse" : "lime"));
   };
 
-  const signInDemo = (email = "creator@reelmux.com") => {
+  const signInDemo = (
+    email = "admin@reelmux.com",
+    meta?: { displayName?: string; avatarUrl?: string | null; provider?: "google" | "email" | "workspace" }
+  ) => {
     setUserEmail(email);
+    setDisplayName(meta?.displayName || email.split("@")[0] || "Creator");
+    if (typeof meta?.avatarUrl !== "undefined") setAvatarUrl(meta.avatarUrl);
+    setAuthProvider(meta?.provider ?? "email");
+    if (!memberSince) {
+      setMemberSince(
+        new Date().toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        })
+      );
+    }
+  };
+
+  const signInWithGoogle = async (nextPath = "/dashboard") => {
+    const supabase = createSupabaseBrowserClient();
+    if (!supabase) {
+      return {
+        ok: false,
+        error: "Supabase client is not configured. Check NEXT_PUBLIC_SUPABASE_URL.",
+      };
+    }
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`,
+        queryParams: {
+          access_type: "offline",
+          prompt: "consent",
+        },
+      },
+    });
+    if (error) {
+      return { ok: false, error: error.message };
+    }
+    return { ok: true };
+  };
+
+  const signOut = async () => {
+    const supabase = createSupabaseBrowserClient();
+    if (supabase) {
+      try {
+        await supabase.auth.signOut();
+      } catch {
+        // Ignore network errors during local cleanup
+      }
+    }
+    setUserId(null);
+    setUserEmail(null);
+    setDisplayName("");
+    setAvatarUrl(null);
+    setAuthProvider(null);
+    setMemberSince(null);
   };
 
   const signOutDemo = () => {
-    setUserEmail(null);
+    void signOut();
+  };
+
+  const updateProfile = async (updates: {
+    displayName?: string;
+    avatarUrl?: string | null;
+  }): Promise<{ ok: boolean; error?: string }> => {
+    const nextName =
+      typeof updates.displayName === "string"
+        ? updates.displayName.trim() || displayName || "Creator"
+        : displayName;
+    const nextAvatar =
+      typeof updates.avatarUrl !== "undefined" ? updates.avatarUrl : avatarUrl;
+
+    setDisplayName(nextName);
+    setAvatarUrl(nextAvatar ?? null);
+
+    const supabase = createSupabaseBrowserClient();
+    if (supabase && userId) {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          display_name: nextName,
+          avatar_url: nextAvatar ?? null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", userId);
+      if (error) {
+        return { ok: false, error: error.message };
+      }
+      await supabase.auth
+        .updateUser({
+          data: { full_name: nextName, avatar_url: nextAvatar ?? null },
+        })
+        .catch(() => {});
+    }
+
+    return { ok: true };
   };
 
   const reserveCredits = (cost: number, note: string): boolean => {
@@ -408,7 +618,12 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   return (
     <WalletContext.Provider
       value={{
+        userId,
         userEmail,
+        displayName,
+        avatarUrl,
+        authProvider,
+        memberSince,
         isSignedIn: Boolean(userEmail),
         availableCredits,
         reservedCredits,
@@ -423,6 +638,9 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         toggleAccentTheme,
         signInDemo,
         signOutDemo,
+        signInWithGoogle,
+        signOut,
+        updateProfile,
         reserveCredits,
         settleCredits,
         refundCredits,

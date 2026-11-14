@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Terminal,
   Zap,
@@ -10,10 +11,14 @@ import {
   ShieldAlert,
   CreditCard,
   CheckCircle2,
+  User,
+  LogOut,
+  LogIn,
 } from "lucide-react";
 import { useWallet } from "@/context/WalletContext";
 
 export default function DashboardPage() {
+  const router = useRouter();
   const {
     availableCredits,
     reservedCredits,
@@ -25,16 +30,74 @@ export default function DashboardPage() {
     jobs,
     orders,
     userEmail,
+    displayName,
+    avatarUrl,
+    authProvider,
+    isSignedIn,
+    signOut,
   } = useWallet();
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 space-y-10">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-extrabold text-white">Workspace &amp; Credit Ledger</h1>
-          <p className="mt-1 text-sm text-zinc-400">{userEmail ?? "creator@reelmux.com"}</p>
+        <div className="flex items-center gap-3.5">
+          {isSignedIn ? (
+            avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt={displayName || userEmail || "Avatar"}
+                className="h-12 w-12 rounded-2xl object-cover border border-[#D4FF00]/40 bg-black"
+              />
+            ) : (
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#D4FF00] text-sm font-extrabold text-black">
+                {(displayName || userEmail || "R").slice(0, 2).toUpperCase()}
+              </div>
+            )
+          ) : null}
+          <div>
+            <h1 className="text-3xl font-extrabold text-white">Workspace &amp; Credit Ledger</h1>
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-zinc-400">
+              <span>{isSignedIn ? `${displayName || userEmail?.split("@")[0]} · ${userEmail}` : "Guest Preview (Not signed in)"}</span>
+              {isSignedIn && (
+                <span className="rounded-full bg-emerald-500/15 border border-emerald-400/30 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-300">
+                  {authProvider === "google" ? "Google" : "Email"}
+                </span>
+              )}
+            </div>
+          </div>
         </div>
+
         <div className="flex flex-wrap gap-2.5">
+          {isSignedIn ? (
+            <>
+              <Link
+                href="/profile"
+                className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-4 py-2.5 text-xs font-semibold text-white hover:bg-white/10"
+              >
+                <User className="h-4 w-4 text-[#D4FF00]" />
+                Profile Settings
+              </Link>
+              <button
+                type="button"
+                onClick={async () => {
+                  await signOut();
+                  router.push("/auth");
+                }}
+                className="inline-flex items-center gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-2.5 text-xs font-semibold text-rose-300 hover:bg-rose-500/20 cursor-pointer"
+              >
+                <LogOut className="h-4 w-4" />
+                Sign out
+              </button>
+            </>
+          ) : (
+            <Link
+              href="/auth?next=/dashboard"
+              className="inline-flex items-center gap-2 rounded-xl border border-[#D4FF00]/40 bg-[#D4FF00]/10 px-4 py-2.5 text-xs font-bold text-[#D4FF00] hover:bg-[#D4FF00]/20"
+            >
+              <LogIn className="h-4 w-4" />
+              Sign in (Google / Email)
+            </Link>
+          )}
           <Link
             href="/admin/signup-abuse"
             className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-4 py-2.5 text-xs font-semibold text-zinc-200 hover:bg-white/10"

@@ -71,7 +71,6 @@ export default function ToolWorkspacePage({
   const [durationSec, setDurationSec] = useState(5);
   const [withAudio, setWithAudio] = useState(true);
   const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
-  const [simulateFailMode, setSimulateFailMode] = useState(false);
   const [customPreviewVideo, setCustomPreviewVideo] = useState<string | null>(null);
   const [customPreviewPoster, setCustomPreviewPoster] = useState<string | null>(null);
   const [arenaMode, setArenaMode] = useState(searchParams.get("arena") === "true");
@@ -245,9 +244,7 @@ export default function ToolWorkspacePage({
       const pollInterval = setInterval(async () => {
         attempts += 1;
         const pollRes = await fetch(
-          `/api/jobs/${encodeURIComponent(yirJobId)}?model=${encodeURIComponent(
-            selectedModel.id
-          )}&simulateFail=${simulateFailMode ? "1" : "0"}`
+          `/api/jobs/${encodeURIComponent(yirJobId)}?model=${encodeURIComponent(selectedModel.id)}`
         );
         const pollData = await pollRes.json();
 
@@ -640,20 +637,6 @@ export default function ToolWorkspacePage({
                 </label>
               )}
             </div>
-
-            {/* Sandbox Auto-Refund Verification Toggle */}
-            <label className="flex items-center justify-between rounded-xl border border-amber-500/20 bg-amber-500/5 px-3.5 py-2.5 text-xs text-amber-200 cursor-pointer">
-              <span className="inline-flex items-center gap-1.5">
-                <RotateCcw className="h-3.5 w-3.5 text-amber-400" />
-                Test Credit Protection (Simulate failure &amp; instant refund)
-              </span>
-              <input
-                type="checkbox"
-                checked={simulateFailMode}
-                onChange={(e) => setSimulateFailMode(e.target.checked)}
-                className="h-4 w-4 accent-amber-400"
-              />
-            </label>
           </div>
 
           {/* 5. Dynamic Pricing Indicator & Primary Generate CTA */}

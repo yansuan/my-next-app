@@ -15,6 +15,12 @@ import {
   Music,
   Cpu,
   Palette,
+  User,
+  LogOut,
+  LogIn,
+  Layers,
+  CreditCard,
+  ShieldAlert,
 } from "lucide-react";
 import { TOOLS_CATALOG, MODELS_CATALOG, BadgeType } from "@/lib/catalog/models";
 import { useWallet } from "@/context/WalletContext";
@@ -44,14 +50,26 @@ export function Navbar() {
     availableCredits,
     reservedCredits,
     isSignedIn,
+    userEmail,
+    displayName,
+    avatarUrl,
+    authProvider,
     accentTheme,
     toggleAccentTheme,
+    signOut,
   } = useWallet();
 
   const [bannerVisible, setBannerVisible] = useState(true);
   const [openMenu, setOpenMenu] = useState<MegaMenuKey>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
   const closeTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    setAccountOpen(false);
+    setMobileOpen(false);
+    setOpenMenu(null);
+  }, [pathname]);
 
   const videoTools = TOOLS_CATALOG.filter((t) => t.category === "video").slice(0, 4);
   const imageTools = TOOLS_CATALOG.filter((t) => t.category === "image").slice(0, 4);
@@ -310,18 +328,110 @@ export function Navbar() {
               )}
             </Link>
 
-            <Link
-              href={isSignedIn ? "/dashboard" : "/auth"}
-              className="rounded-lg px-3 py-2 text-sm font-semibold text-zinc-300 hover:bg-white/10 hover:text-white transition-colors"
-            >
-              {isSignedIn ? "Workspace" : "Sign in"}
-            </Link>
+            {isSignedIn ? (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setAccountOpen((v) => !v)}
+                  className="flex items-center gap-2 rounded-lg border border-white/15 bg-white/[0.05] px-2.5 py-1.5 text-xs font-semibold text-white hover:border-[#D4FF00]/60 transition-colors cursor-pointer"
+                >
+                  {avatarUrl ? (
+                    <img
+                      src={avatarUrl}
+                      alt={displayName || userEmail || "Avatar"}
+                      className="h-5 w-5 rounded-full object-cover border border-[#D4FF00]/50"
+                    />
+                  ) : (
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#D4FF00] text-[10px] font-extrabold text-black">
+                      {(displayName || userEmail || "R").slice(0, 2).toUpperCase()}
+                    </span>
+                  )}
+                  <span className="max-w-[110px] truncate">
+                    {displayName || userEmail?.split("@")[0] || "Account"}
+                  </span>
+                  <ChevronDown
+                    className={`h-3.5 w-3.5 text-zinc-400 transition-transform ${
+                      accountOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+
+                {accountOpen && (
+                  <div className="absolute right-0 mt-2 w-64 rounded-2xl border border-white/15 bg-[#0D1018] p-2 shadow-2xl z-50">
+                    <div className="px-3 py-2.5 border-b border-white/10">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="truncate text-xs font-bold text-white">
+                          {displayName || userEmail?.split("@")[0]}
+                        </span>
+                        <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase text-emerald-300">
+                          {authProvider === "google" ? "Google" : "Email"}
+                        </span>
+                      </div>
+                      <div className="truncate text-[11px] text-zinc-400 mt-0.5">{userEmail}</div>
+                    </div>
+
+                    <div className="py-1 space-y-0.5 text-xs">
+                      <Link
+                        href="/profile"
+                        className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-zinc-200 hover:bg-white/10 hover:text-white"
+                      >
+                        <User className="h-3.5 w-3.5 text-[#D4FF00]" />
+                        Personal Profile &amp; Settings
+                      </Link>
+                      <Link
+                        href="/dashboard"
+                        className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-zinc-200 hover:bg-white/10 hover:text-white"
+                      >
+                        <Layers className="h-3.5 w-3.5 text-cyan-300" />
+                        Workspace &amp; Credit Ledger
+                      </Link>
+                      <Link
+                        href="/pricing"
+                        className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-zinc-200 hover:bg-white/10 hover:text-white"
+                      >
+                        <CreditCard className="h-3.5 w-3.5 text-emerald-300" />
+                        Billing &amp; Top Up Credits
+                      </Link>
+                      <Link
+                        href="/admin"
+                        className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-zinc-200 hover:bg-white/10 hover:text-white"
+                      >
+                        <ShieldAlert className="h-3.5 w-3.5 text-amber-300" />
+                        Admin Console
+                      </Link>
+                    </div>
+
+                    <div className="pt-1 mt-1 border-t border-white/10">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          setAccountOpen(false);
+                          await signOut();
+                        }}
+                        className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-semibold text-rose-300 hover:bg-rose-500/15 cursor-pointer"
+                      >
+                        <LogOut className="h-3.5 w-3.5" />
+                        Sign out
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Link
+                href="/auth"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/[0.04] px-3 py-2 text-sm font-semibold text-white hover:border-[#D4FF00]/60 hover:bg-white/10 transition-colors"
+              >
+                <LogIn className="h-3.5 w-3.5 text-[#D4FF00]" />
+                Sign in
+              </Link>
+            )}
 
             <Link
-              href="/tools/text-to-video"
+              href={isSignedIn ? "/tools/text-to-video" : "/auth"}
               className="rounded-lg bg-white px-3.5 py-2 text-sm font-semibold text-black shadow-sm hover:bg-zinc-200 active:scale-[0.98] transition-all"
             >
-              Start free
+              {isSignedIn ? "Open Studio" : "Start free"}
             </Link>
           </div>
 
@@ -697,20 +807,58 @@ export function Navbar() {
                 Pricing
               </Link>
             </div>
-            <div className="flex items-center gap-3 pt-2">
-              <Link
-                href="/auth"
-                className="flex-1 rounded-lg border border-white/15 py-2 text-center text-sm font-semibold text-white"
-              >
-                Sign in
-              </Link>
-              <Link
-                href="/tools/text-to-video"
-                className="flex-1 rounded-lg bg-[#D4FF00] py-2 text-center text-sm font-bold text-black"
-              >
-                Start free
-              </Link>
-            </div>
+            {isSignedIn ? (
+              <div className="space-y-2 pt-2">
+                <div className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#D4FF00] text-xs font-extrabold text-black">
+                    {(displayName || userEmail || "R").slice(0, 2).toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-xs font-bold text-white">{displayName}</div>
+                    <div className="truncate text-[11px] text-zinc-400">{userEmail}</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Link
+                    href="/profile"
+                    className="flex-1 rounded-lg border border-white/15 py-2 text-center text-xs font-semibold text-white"
+                  >
+                    Profile
+                  </Link>
+                  <Link
+                    href="/dashboard"
+                    className="flex-1 rounded-lg border border-white/15 py-2 text-center text-xs font-semibold text-white"
+                  >
+                    Workspace
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setMobileOpen(false);
+                      await signOut();
+                    }}
+                    className="flex-1 rounded-lg border border-rose-500/35 bg-rose-500/10 py-2 text-center text-xs font-bold text-rose-300 cursor-pointer"
+                  >
+                    Sign out
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 pt-2">
+                <Link
+                  href="/auth"
+                  className="flex-1 rounded-lg border border-white/15 py-2 text-center text-sm font-semibold text-white"
+                >
+                  Sign in
+                </Link>
+                <Link
+                  href="/tools/text-to-video"
+                  className="flex-1 rounded-lg bg-[#D4FF00] py-2 text-center text-sm font-bold text-black"
+                >
+                  Start free
+                </Link>
+              </div>
+            )}
           </div>
         )}
       </div>
