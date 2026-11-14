@@ -344,12 +344,33 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithGoogle = async (nextPath = "/dashboard") => {
     const supabase = createSupabaseBrowserClient();
-    if (!supabase) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!supabase || !supabaseUrl || !supabaseAnonKey) {
       return {
         ok: false,
         error: "Supabase client is not configured. Check NEXT_PUBLIC_SUPABASE_URL.",
       };
     }
+
+    // Pre-check whether Google provider is enabled in Supabase so users never land on a raw JSON 400 page
+    try {
+      const settingsRes = await fetch(`${supabaseUrl}/auth/v1/settings`, {
+        headers: { apikey: supabaseAnonKey },
+      });
+      if (settingsRes.ok) {
+        const settingsJson = await settingsRes.json();
+        if (settingsJson?.external && settingsJson.external.google === false) {
+          return {
+            ok: false,
+            error: "Unsupported provider: Google OAuth provider is not enabled yet in Supabase Auth.",
+          };
+        }
+      }
+    } catch {
+      // Proceed to OAuth attempt if settings check is temporarily unreachable
+    }
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
