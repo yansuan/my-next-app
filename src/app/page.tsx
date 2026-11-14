@@ -16,6 +16,9 @@ import {
   Cpu,
   Wand2,
   Shuffle,
+  Palette,
+  Contrast,
+  Users,
 } from "lucide-react";
 import {
   TOOLS_CATALOG,
@@ -24,6 +27,8 @@ import {
   HERO_LIVE_SAMPLES,
   HERO_BG_VIDEOS,
   VIDEO_EXAMPLES_GALLERY,
+  IMAGE_EXAMPLES_GALLERY,
+  USE_CASE_CATEGORIES,
   BRAND_MARQUEE_LIST,
 } from "@/lib/catalog/models";
 
@@ -34,6 +39,12 @@ export default function HomePage() {
 
   const [activeSampleIndex, setActiveSampleIndex] = useState(0);
   const [toolFilter, setToolFilter] = useState<"all" | "video" | "image" | "audio">("all");
+  const [showcaseMediaTab, setShowcaseMediaTab] = useState<"video" | "image">("video");
+  const [showcaseCategory, setShowcaseCategory] = useState<string>("All");
+  const [activeCategoryId, setActiveCategoryId] = useState<string>(
+    USE_CASE_CATEGORIES[0]?.id ?? "commercial-ads"
+  );
+  const [contrastPreviewMap, setContrastPreviewMap] = useState<Record<string, boolean>>({});
   const [deckMode, setDeckMode] = useState<"video" | "image" | "storyboard" | "arena">("video");
   const [deckPrompt, setDeckPrompt] = useState(
     "Anamorphic drone tracking shot over rain-slicked Neo-Tokyo neon rooftops at midnight, 24fps cinema grain"
@@ -65,14 +76,45 @@ export default function HomePage() {
     setHeroBgPaused(false);
   };
 
-  const activeSample = HERO_LIVE_SAMPLES[activeSampleIndex];
+  const activeSample = HERO_LIVE_SAMPLES[activeSampleIndex] ?? HERO_LIVE_SAMPLES[0];
   const filteredTools =
     toolFilter === "all"
       ? TOOLS_CATALOG
       : TOOLS_CATALOG.filter((t) => t.category === toolFilter);
 
   const featuredModels = MODELS_CATALOG.slice(0, 12);
-  const madeOnReelMuxClips = VIDEO_EXAMPLES_GALLERY.slice(0, 6);
+
+  const showcaseVideoCategories = [
+    "All",
+    "Commercial",
+    "Cinema & Sci-Fi",
+    "3D & VFX",
+    "Fashion & Human",
+    "Nature & Travel",
+  ];
+  const showcaseImageCategories = [
+    "All",
+    "Commercial",
+    "Cinema & Sci-Fi",
+    "Fashion & Human",
+    "Architecture",
+    "Design & UI",
+  ];
+
+  const madeOnReelMuxClips = (
+    showcaseCategory === "All"
+      ? VIDEO_EXAMPLES_GALLERY
+      : VIDEO_EXAMPLES_GALLERY.filter((c) => c.categoryTag === showcaseCategory)
+  ).slice(0, 6);
+
+  const curatedImageExamples = (
+    showcaseCategory === "All"
+      ? IMAGE_EXAMPLES_GALLERY
+      : IMAGE_EXAMPLES_GALLERY.filter((img) => img.categoryTag === showcaseCategory)
+  ).slice(0, 6);
+
+  const activeUseCaseCategory =
+    USE_CASE_CATEGORIES.find((c) => c.id === activeCategoryId) ?? USE_CASE_CATEGORIES[0];
 
   return (
     <div className="relative overflow-hidden">
@@ -115,7 +157,8 @@ export default function HomePage() {
           >
             <Shuffle className="h-3 w-3 text-[#D4FF00]" />
             <span>
-              Reel: <strong className="text-white">{currentHeroBg.modelName}</strong>
+              Reel: <strong className="text-cyan-300">{currentHeroBg.categoryTag}</strong> ·{" "}
+              <strong className="text-white">{currentHeroBg.modelName}</strong>
             </span>
           </button>
 
@@ -329,6 +372,15 @@ export default function HomePage() {
                   >
                     <span>{sample.modelName}</span>
                     <span
+                      className={`hidden sm:inline rounded px-1.5 py-0.5 text-[10px] ${
+                        idx === activeSampleIndex
+                          ? "bg-black/15 text-black/80 font-semibold"
+                          : "bg-cyan-500/10 text-cyan-300"
+                      }`}
+                    >
+                      {sample.sceneType}
+                    </span>
+                    <span
                       className={`rounded px-1.5 py-0.5 text-[10px] ${
                         idx === activeSampleIndex
                           ? "bg-black/20 text-black font-bold"
@@ -369,6 +421,9 @@ export default function HomePage() {
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-black/75 backdrop-blur-md border border-white/15 px-3 py-1 text-xs font-semibold text-white">
                     <Play className="h-3 w-3 fill-[#D4FF00] text-[#D4FF00]" />
                     {activeSample.modelName}
+                  </span>
+                  <span className="rounded-full bg-cyan-500/20 backdrop-blur-md border border-cyan-400/35 px-2.5 py-1 text-[11px] font-semibold text-cyan-200">
+                    {activeSample.sceneType}
                   </span>
                   <span className="rounded-full bg-black/75 backdrop-blur-md border border-white/15 px-2.5 py-1 text-[11px] text-zinc-300">
                     {activeSample.resolution}
@@ -465,82 +520,405 @@ export default function HomePage() {
       </section>
 
       {/* =====================================================================
-          3. MADE ON REELMUX — 6 LIVE AUTO-PLAYING VIDEO SHOWCASE CARDS
+          3. MADE ON REELMUX — FILTERABLE VIDEO & 4K IMAGE CONTRAST SHOWCASE
          ===================================================================== */}
       <section className="py-20 border-b border-white/10">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <div className="inline-flex items-center gap-1.5 rounded-full border border-[#D4FF00]/30 bg-[#D4FF00]/10 px-3 py-1 text-xs font-semibold text-[#D4FF00]">
                 <Play className="h-3 w-3 fill-current" />
-                Made on ReelMux
+                Made on ReelMux · Multi-Theme Showcase
               </div>
               <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
-                Real outputs across flagship video models
+                High-contrast outputs across cinema, ads &amp; design
               </h2>
               <p className="mt-2 max-w-2xl text-sm sm:text-base text-zinc-400">
-                Every clip below is rendered directly from a single prompt. Click any shot to open
-                the exact model and prompt in the video studio.
+                Switch between flagship video renders and bespoke 4K image keyframes, or filter by
+                industry category to inspect strong visual contrast across real production prompts.
               </p>
             </div>
+
+            {/* Media Type Toggle: Video vs 4K Images */}
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="inline-flex rounded-xl border border-white/10 bg-[#0C0E14] p-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowcaseMediaTab("video");
+                    setShowcaseCategory("All");
+                  }}
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+                    showcaseMediaTab === "video"
+                      ? "bg-[#D4FF00] text-black shadow-sm"
+                      : "text-zinc-300 hover:text-white"
+                  }`}
+                >
+                  <Video className="h-3.5 w-3.5" />
+                  Video Reels (16)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowcaseMediaTab("image");
+                    setShowcaseCategory("All");
+                  }}
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+                    showcaseMediaTab === "image"
+                      ? "bg-cyan-400 text-black shadow-sm"
+                      : "text-zinc-300 hover:text-white"
+                  }`}
+                >
+                  <ImageIcon className="h-3.5 w-3.5" />
+                  4K Image Keyframes (8)
+                </button>
+              </div>
+              <Link
+                href={showcaseMediaTab === "video" ? "/tools/text-to-video" : "/tools/text-to-image"}
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#D4FF00] hover:underline"
+              >
+                Open Studio
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+          </div>
+
+          {/* Category Filter Pills */}
+          <div className="mt-6 flex flex-wrap items-center gap-2">
+            {(showcaseMediaTab === "video"
+              ? showcaseVideoCategories
+              : showcaseImageCategories
+            ).map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setShowcaseCategory(cat)}
+                className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
+                  showcaseCategory === cat
+                    ? "bg-white text-black shadow-sm"
+                    : "border border-white/10 bg-[#0C0E14] text-zinc-400 hover:border-white/25 hover:text-white"
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+
+          {showcaseMediaTab === "video" ? (
+            <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {madeOnReelMuxClips.map((clip) => (
+                <Link
+                  key={clip.id}
+                  href={`/tools/text-to-video?model=${clip.modelId}&prompt=${encodeURIComponent(
+                    clip.prompt
+                  )}`}
+                  className="group relative flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0C0E14] hover:border-[#D4FF00]/60 transition-all"
+                >
+                  <div className="relative aspect-video w-full overflow-hidden bg-black">
+                    <video
+                      src={clip.videoUrl}
+                      poster={clip.posterUrl}
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                      preload="metadata"
+                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-black/35" />
+                    <div className="absolute top-3 left-3 flex flex-wrap items-center gap-1.5">
+                      <span className="rounded-lg bg-black/80 backdrop-blur-md border border-white/15 px-2.5 py-1 text-xs font-bold text-white">
+                        {clip.modelName}
+                      </span>
+                      <span className="rounded-md bg-cyan-500/20 backdrop-blur-md border border-cyan-400/35 px-2 py-0.5 text-[10px] font-semibold text-cyan-200">
+                        {clip.categoryTag}
+                      </span>
+                    </div>
+                    <div className="absolute top-3 right-3 rounded-full bg-[#D4FF00] px-2.5 py-0.5 text-[11px] font-extrabold text-black">
+                      {clip.credits}c
+                    </div>
+                    <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between gap-2 text-[10px] font-semibold">
+                      <span className="rounded-md bg-black/75 border border-white/10 px-2 py-0.5 text-zinc-200">
+                        {clip.subCategoryTag}
+                      </span>
+                      <span className="rounded-md bg-black/75 border border-amber-400/30 px-2 py-0.5 text-amber-200">
+                        {clip.visualContrast}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="p-4 flex-1 flex flex-col justify-between">
+                    <div>
+                      <div className="text-sm font-bold text-white group-hover:text-[#D4FF00] transition-colors">
+                        {clip.title}
+                      </div>
+                      <p className="mt-1 text-xs text-zinc-400 line-clamp-2 leading-relaxed">
+                        {clip.prompt}
+                      </p>
+                    </div>
+                    <div className="mt-3 pt-2.5 border-t border-white/5 flex items-center justify-between text-[11px] font-semibold text-zinc-300">
+                      <span>Remix in Text to Video · {clip.resolution} · {clip.durationSec}s</span>
+                      <ArrowRight className="h-3.5 w-3.5 text-[#D4FF00] group-hover:translate-x-0.5 transition-transform" />
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {curatedImageExamples.map((img) => (
+                <Link
+                  key={img.id}
+                  href={`/tools/text-to-image?model=${img.modelId}&prompt=${encodeURIComponent(
+                    img.prompt
+                  )}`}
+                  className="group relative flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0C0E14] hover:border-cyan-400/60 transition-all"
+                >
+                  <div className="relative aspect-video w-full overflow-hidden bg-black">
+                    <img
+                      src={img.imageUrl}
+                      alt={img.title}
+                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-black/30" />
+                    <div className="absolute top-3 left-3 flex flex-wrap items-center gap-1.5">
+                      <span className="rounded-lg bg-black/80 backdrop-blur-md border border-white/15 px-2.5 py-1 text-xs font-bold text-white">
+                        {img.modelName}
+                      </span>
+                      <span className="rounded-md bg-cyan-500/20 backdrop-blur-md border border-cyan-400/35 px-2 py-0.5 text-[10px] font-semibold text-cyan-200">
+                        {img.categoryTag}
+                      </span>
+                    </div>
+                    <div className="absolute top-3 right-3 rounded-full bg-cyan-400 px-2.5 py-0.5 text-[11px] font-extrabold text-black">
+                      {img.credits}c · {img.resolution}
+                    </div>
+                    <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between gap-2 text-[10px] font-semibold">
+                      <span className="rounded-md bg-black/75 border border-white/10 px-2 py-0.5 text-zinc-200">
+                        {img.subCategoryTag}
+                      </span>
+                      <span className="rounded-md bg-black/75 border border-amber-400/30 px-2 py-0.5 text-amber-200">
+                        {img.visualContrast}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="p-4 flex-1 flex flex-col justify-between">
+                    <div>
+                      <div className="text-sm font-bold text-white group-hover:text-cyan-300 transition-colors">
+                        {img.title}
+                      </div>
+                      <p className="mt-1 text-xs text-zinc-400 line-clamp-2 leading-relaxed">
+                        {img.prompt}
+                      </p>
+                    </div>
+                    <div className="mt-3 pt-2.5 border-t border-white/5 flex items-center justify-between text-[11px] font-semibold text-zinc-300">
+                      <span>Render 4K Keyframe with {img.modelName}</span>
+                      <ArrowRight className="h-3.5 w-3.5 text-cyan-300 group-hover:translate-x-0.5 transition-transform" />
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* =====================================================================
+          3B. CREATIVE CATEGORIES & SUB-SCENARIOS MATRIX (6x4 = 24 SCENARIOS)
+         ===================================================================== */}
+      <section className="py-20 border-b border-white/10 bg-[#080A0F]">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-cyan-400/35 bg-cyan-400/10 px-3 py-1 text-xs font-semibold text-cyan-300">
+                <Palette className="h-3.5 w-3.5" />
+                6 Major Categories × 24 Sub-Scenarios
+              </div>
+              <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
+                Scenario-first architecture by industry &amp; visual contrast
+              </h2>
+              <p className="mt-2 max-w-2xl text-sm sm:text-base text-zinc-400">
+                Select any production vertical to explore 4 tailored subcategories. Toggle{" "}
+                <strong className="text-white">Contrast Ref</strong> on any card to compare lighting,
+                materiality, and color palettes before launching directly into the studio.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-400">
+              <span>Recommended pipeline:</span>
+              {activeUseCaseCategory.recommendedTools.map((slug) => (
+                <Link
+                  key={slug}
+                  href={`/tools/${slug}`}
+                  className="rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1 font-semibold text-zinc-200 hover:border-[#D4FF00]/50 hover:text-[#D4FF00] transition-colors"
+                >
+                  {slug}
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* 6 Major Category Switcher Tabs */}
+          <div className="mt-8 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
+            {USE_CASE_CATEGORIES.map((cat) => {
+              const isActive = cat.id === activeUseCaseCategory.id;
+              return (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => setActiveCategoryId(cat.id)}
+                  className={`flex flex-col items-start rounded-xl border p-3.5 text-left transition-all cursor-pointer ${
+                    isActive
+                      ? "border-[#D4FF00] bg-[#D4FF00]/10 shadow-lg shadow-[#D4FF00]/5"
+                      : "border-white/10 bg-[#0D1017] hover:border-white/25 hover:bg-[#121620]"
+                  }`}
+                >
+                  <div className="flex w-full items-center justify-between gap-1">
+                    <span
+                      className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${
+                        isActive ? "bg-[#D4FF00] text-black" : "bg-white/10 text-zinc-300"
+                      }`}
+                    >
+                      {cat.badge}
+                    </span>
+                    <span className="text-[10px] font-mono text-zinc-500">
+                      {cat.subScenarios.length} sub
+                    </span>
+                  </div>
+                  <div
+                    className={`mt-2 text-xs sm:text-sm font-bold leading-snug ${
+                      isActive ? "text-white" : "text-zinc-200"
+                    }`}
+                  >
+                    {cat.name}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Active Category Subtitle Banner */}
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#0D1017] px-4 py-3">
+            <div>
+              <div className="text-sm font-bold text-white">{activeUseCaseCategory.name}</div>
+              <div className="text-xs text-zinc-400 mt-0.5">{activeUseCaseCategory.subtitle}</div>
+            </div>
             <Link
-              href="/tools/text-to-video"
-              className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#D4FF00] hover:underline"
+              href="/storyboard"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-cyan-400/35 bg-cyan-400/10 px-3 py-1.5 text-xs font-semibold text-cyan-200 hover:bg-cyan-400/20 transition-colors"
             >
-              Open Video Studio (22+ examples)
-              <ArrowRight className="h-4 w-4" />
+              Sequence all 4 shots in Storyboard
+              <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
 
-          <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {madeOnReelMuxClips.map((clip) => (
-              <Link
-                key={clip.id}
-                href={`/tools/text-to-video?model=${clip.modelId}&prompt=${encodeURIComponent(
-                  clip.prompt
-                )}`}
-                className="group relative flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0C0E14] hover:border-[#D4FF00]/60 transition-all"
-              >
-                <div className="relative aspect-video w-full overflow-hidden bg-black">
-                  <video
-                    src={clip.videoUrl}
-                    poster={clip.posterUrl}
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    preload="metadata"
-                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
-                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30" />
-                  <div className="absolute top-3 left-3 flex items-center gap-2">
-                    <span className="rounded-lg bg-black/75 backdrop-blur-md border border-white/15 px-2.5 py-1 text-xs font-bold text-white">
-                      {clip.modelName}
-                    </span>
-                    <span className="rounded-md bg-black/70 px-2 py-0.5 text-[10px] font-medium text-zinc-300">
-                      {clip.resolution} · {clip.durationSec}s
-                    </span>
-                  </div>
-                  <div className="absolute top-3 right-3 rounded-full bg-[#D4FF00] px-2.5 py-0.5 text-[11px] font-extrabold text-black">
-                    {clip.credits}c
-                  </div>
-                </div>
-                <div className="p-4 flex-1 flex flex-col justify-between">
-                  <div>
-                    <div className="text-sm font-bold text-white group-hover:text-[#D4FF00] transition-colors">
-                      {clip.title}
+          {/* 4 Subcategory Cards for Active Category */}
+          <div className="mt-6 grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
+            {activeUseCaseCategory.subScenarios.map((sub) => {
+              const showContrast = !!contrastPreviewMap[sub.id];
+              return (
+                <div
+                  key={sub.id}
+                  className="flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0D1017] hover:border-white/25 transition-all"
+                >
+                  {/* Media Stage (Supports Primary Video/Image OR Contrast Ref Toggle) */}
+                  <div className="relative aspect-[4/3] w-full overflow-hidden bg-black">
+                    {!showContrast && sub.mediaType === "video" && sub.videoUrl ? (
+                      <video
+                        key={sub.videoUrl}
+                        src={sub.videoUrl}
+                        poster={sub.posterUrl}
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
+                        preload="metadata"
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <img
+                        src={showContrast ? sub.contrastPosterUrl : sub.posterUrl}
+                        alt={sub.name}
+                        className="h-full w-full object-cover transition-all duration-300"
+                      />
+                    )}
+                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-black/35" />
+
+                    {/* Top Pills: Model + Contrast Ref Toggle */}
+                    <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between gap-2">
+                      <span className="rounded-md bg-black/80 backdrop-blur-md border border-white/15 px-2 py-0.5 text-[10px] font-bold text-white">
+                        {sub.modelName} · {sub.credits}c
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setContrastPreviewMap((prev) => ({
+                            ...prev,
+                            [sub.id]: !prev[sub.id],
+                          }))
+                        }
+                        title="Toggle between primary render and contrast style reference"
+                        className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold backdrop-blur-md transition-all cursor-pointer ${
+                          showContrast
+                            ? "bg-amber-400 text-black"
+                            : "bg-black/80 border border-white/20 text-zinc-200 hover:border-[#D4FF00]"
+                        }`}
+                      >
+                        <Contrast className="h-3 w-3" />
+                        {showContrast ? "Primary" : "Contrast Ref"}
+                      </button>
                     </div>
-                    <p className="mt-1 text-xs text-zinc-400 line-clamp-2 leading-relaxed">
-                      {clip.prompt}
-                    </p>
+
+                    {/* Bottom Visual Tone + Swatches */}
+                    <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between gap-2">
+                      <span className="rounded bg-black/75 border border-white/10 px-2 py-0.5 text-[10px] font-semibold text-cyan-200">
+                        {sub.visualTone}
+                      </span>
+                      <div className="flex items-center gap-1 bg-black/70 rounded-full px-1.5 py-1 border border-white/10">
+                        {sub.paletteHex.map((hex) => (
+                          <span
+                            key={hex}
+                            style={{ backgroundColor: hex }}
+                            title={hex}
+                            className="h-2.5 w-2.5 rounded-full border border-white/25"
+                          />
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                  <div className="mt-3 pt-2.5 border-t border-white/5 flex items-center justify-between text-[11px] font-semibold text-zinc-300">
-                    <span>Remix in Text to Video</span>
-                    <ArrowRight className="h-3.5 w-3.5 text-[#D4FF00] group-hover:translate-x-0.5 transition-transform" />
+
+                  {/* Card Body */}
+                  <div className="flex flex-1 flex-col justify-between p-4">
+                    <div>
+                      <div className="flex items-center justify-between gap-2 text-[11px] text-zinc-400">
+                        <span className="inline-flex items-center gap-1">
+                          <Users className="h-3 w-3 text-[#D4FF00]" />
+                          {sub.targetAudience}
+                        </span>
+                        <span className="font-mono text-[10px] uppercase text-zinc-500">
+                          {sub.mediaType}
+                        </span>
+                      </div>
+                      <h3 className="mt-1.5 text-sm font-bold text-white">{sub.name}</h3>
+                      <div className="mt-1 inline-block rounded bg-amber-500/10 border border-amber-400/25 px-2 py-0.5 text-[10px] font-semibold text-amber-200">
+                        {sub.contrastPairLabel}
+                      </div>
+                      <p className="mt-2 text-xs text-zinc-400 line-clamp-2 leading-relaxed">
+                        {sub.prompt}
+                      </p>
+                    </div>
+
+                    <Link
+                      href={`/tools/${sub.toolSlug}?model=${sub.modelId}&prompt=${encodeURIComponent(
+                        sub.prompt
+                      )}`}
+                      className="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-white/[0.06] border border-white/10 px-3 py-2 text-xs font-bold text-white hover:bg-[#D4FF00] hover:text-black hover:border-[#D4FF00] transition-all"
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      Launch Sub-Scenario
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
                   </div>
                 </div>
-              </Link>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>
