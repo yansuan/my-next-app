@@ -79,8 +79,8 @@ function AiEffectsContent() {
       const created = await res.json();
       if (!res.ok) throw new Error(created.error || "Dispatch failed");
 
-      for (let i = 0; i < 15; i++) {
-        await new Promise((r) => setTimeout(r, 1100));
+      for (let i = 0; i < 60; i++) {
+        await new Promise((r) => setTimeout(r, 2000));
         const p = await (
           await fetch(
             `/api/jobs/${encodeURIComponent(created.yirJobId)}?model=${effect.modelId}`

@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
       const store = getAdminStore();
       store.auditLogs.unshift({
         id: `aud-${Date.now()}`,
-        actorEmail: "admin@reelmux.com",
+        actorEmail: "ops@reelmux.com",
         action: "waffo.auto_provisioned",
         targetType: "system",
         targetId: provisioned.storeId || "waffo",

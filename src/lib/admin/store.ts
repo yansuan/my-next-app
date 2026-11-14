@@ -332,8 +332,8 @@ const INITIAL_ABUSE_CLUSTERS: AbuseCluster[] = [
 const INITIAL_USERS: AdminUserRecord[] = [
   {
     id: "usr-001",
-    email: "admin@reelmux.com",
-    displayName: "ReelMux Admin",
+    email: "alex.mercer@studio.reelmux.com",
+    displayName: "Alex Mercer",
     planTier: "studio",
     balanceAvailable: 14820,
     balanceReserved: 0,
@@ -504,7 +504,7 @@ const INITIAL_GENERATIONS: AdminGenerationRecord[] = [
   {
     id: "gen-9940",
     upstreamJobId: "job_seedance25_77102b",
-    userEmail: "admin@reelmux.com",
+    userEmail: "alex.mercer@studio.reelmux.com",
     toolSlug: "reference-to-video",
     category: "video",
     modelId: "seedance-2.5",
@@ -616,7 +616,7 @@ const INITIAL_UPLOADS: AdminUploadRecord[] = [
   },
   {
     id: "upl-503",
-    userEmail: "admin@reelmux.com",
+    userEmail: "alex.mercer@studio.reelmux.com",
     fileName: "tokyo-neon-plate-4k.jpg",
     mimeType: "image/jpeg",
     sizeBytes: 6_412_000,
@@ -644,7 +644,7 @@ const INITIAL_ORDERS: AdminOrderRecord[] = [
   {
     id: "ord-8001",
     orderNo: "RMX-20261114-8001",
-    userEmail: "admin@reelmux.com",
+    userEmail: "alex.mercer@studio.reelmux.com",
     itemType: "credit_pack",
     itemName: "Studio Pack (15,000 credits)",
     amountUsd: 169,
@@ -731,7 +731,7 @@ const INITIAL_AUDIT_LOGS: AdminAuditLogRecord[] = [
   },
   {
     id: "aud-104",
-    actorEmail: "admin@reelmux.com",
+    actorEmail: "alex.mercer@studio.reelmux.com",
     action: "order.completed",
     targetType: "order",
     targetId: "RMX-20261114-8001",

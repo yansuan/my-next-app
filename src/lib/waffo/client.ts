@@ -406,7 +406,7 @@ export function runWaffoSandboxTestSuite(): WaffoTestCaseResult[] {
 
   store.auditLogs.unshift({
     id: `aud-wfo-suite-${Date.now()}`,
-    actorEmail: "admin@reelmux.com",
+    actorEmail: "ops@reelmux.com",
     action: "waffo.sandbox_test_suite",
     targetType: "order",
     targetId: `WFO-TEST-${batchSuffix}`,

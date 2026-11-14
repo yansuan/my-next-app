@@ -11,10 +11,9 @@ import {
   ShieldAlert,
   CreditCard,
   ClipboardList,
-  ArrowLeft,
+  ShieldCheck,
 } from "lucide-react";
 import { BrandLogo } from "@/components/brand/BrandLogo";
-import { useWallet } from "@/context/WalletContext";
 
 interface NavItem {
   label: string;
@@ -65,38 +64,30 @@ const BREADCRUMB_LABELS: Record<string, string> = {
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { userEmail } = useWallet();
 
   const currentLabel = BREADCRUMB_LABELS[pathname] || "Overview";
-  const [customAdminName, setCustomAdminName] = React.useState<string>("admin@reelmux.com");
+  const [customAdminName, setCustomAdminName] = React.useState<string>("ops@reelmux.com");
   const [editingAdminName, setEditingAdminName] = React.useState(false);
-  const [draftAdminName, setDraftAdminName] = React.useState("admin@reelmux.com");
+  const [draftAdminName, setDraftAdminName] = React.useState("ops@reelmux.com");
 
   React.useEffect(() => {
     try {
-      const saved = window.localStorage.getItem("reelmux_admin_username");
+      const saved = window.localStorage.getItem("reelmux_admin_operator");
       if (saved && saved.trim()) {
         setCustomAdminName(saved.trim());
         setDraftAdminName(saved.trim());
-      } else if (
-        userEmail &&
-        userEmail !== "creator@reelmux.com" &&
-        !userEmail.includes("firefish")
-      ) {
-        setCustomAdminName(userEmail);
-        setDraftAdminName(userEmail);
       }
     } catch {
       // ignore storage errors
     }
-  }, [userEmail]);
+  }, []);
 
   const saveAdminName = async () => {
-    const clean = draftAdminName.trim() || "admin@reelmux.com";
+    const clean = draftAdminName.trim() || "ops@reelmux.com";
     setCustomAdminName(clean);
     setEditingAdminName(false);
     try {
-      window.localStorage.setItem("reelmux_admin_username", clean);
+      window.localStorage.setItem("reelmux_admin_operator", clean);
       await fetch("/api/admin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -166,15 +157,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </nav>
         </div>
 
-        {/* Bottom Back to Site Link */}
+        {/* Bottom Isolated Admin Status */}
         <div className="border-t border-white/[0.06] px-5 py-3.5">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-xs text-zinc-400 hover:text-white transition-colors"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Back to site
-          </Link>
+          <div className="inline-flex items-center gap-2 text-[11px] text-zinc-500">
+            <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
+            <span>Isolated Admin Session</span>
+          </div>
         </div>
       </aside>
 
@@ -200,7 +188,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     if (e.key === "Enter") saveAdminName();
                     if (e.key === "Escape") setEditingAdminName(false);
                   }}
-                  placeholder="admin@reelmux.com"
+                  placeholder="ops@reelmux.com"
                   className="w-48 rounded-md border border-[#D4FF00]/50 bg-[#0B0C10] px-2.5 py-1 font-mono text-xs text-white focus:outline-none"
                   autoFocus
                 />

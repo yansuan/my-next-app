@@ -169,11 +169,6 @@ export function Footer() {
                   </Link>
                 </li>
                 <li>
-                  <Link href="/admin" className="hover:text-[#D4FF00] transition-colors">
-                    Admin Console
-                  </Link>
-                </li>
-                <li>
                   <Link href="/legal/terms" className="hover:text-white transition-colors">
                     Terms of Service
                   </Link>

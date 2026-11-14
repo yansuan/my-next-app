@@ -20,7 +20,6 @@ import {
   LogIn,
   Layers,
   CreditCard,
-  ShieldAlert,
 } from "lucide-react";
 import { TOOLS_CATALOG, MODELS_CATALOG, BadgeType } from "@/lib/catalog/models";
 import { useWallet } from "@/context/WalletContext";
@@ -391,13 +390,6 @@ export function Navbar() {
                       >
                         <CreditCard className="h-3.5 w-3.5 text-emerald-300" />
                         Billing &amp; Top Up Credits
-                      </Link>
-                      <Link
-                        href="/admin"
-                        className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-zinc-200 hover:bg-white/10 hover:text-white"
-                      >
-                        <ShieldAlert className="h-3.5 w-3.5 text-amber-300" />
-                        Admin Console
                       </Link>
                     </div>
 

@@ -78,7 +78,6 @@ interface WalletContextValue {
   jobs: JobRecord[];
   orders: UserOrderRecord[];
   toggleAccentTheme: () => void;
-  signInDemo: (email?: string, meta?: { displayName?: string; avatarUrl?: string | null; provider?: "google" | "email" | "workspace" }) => void;
   signOutDemo: () => void;
   signInWithGoogle: (nextPath?: string) => Promise<{ ok: boolean; error?: string }>;
   signOut: () => Promise<void>;
@@ -321,25 +320,6 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
   const toggleAccentTheme = () => {
     setAccentTheme((prev) => (prev === "lime" ? "pulse" : "lime"));
-  };
-
-  const signInDemo = (
-    email = "admin@reelmux.com",
-    meta?: { displayName?: string; avatarUrl?: string | null; provider?: "google" | "email" | "workspace" }
-  ) => {
-    setUserEmail(email);
-    setDisplayName(meta?.displayName || email.split("@")[0] || "Creator");
-    if (typeof meta?.avatarUrl !== "undefined") setAvatarUrl(meta.avatarUrl);
-    setAuthProvider(meta?.provider ?? "email");
-    if (!memberSince) {
-      setMemberSince(
-        new Date().toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-        })
-      );
-    }
   };
 
   const signInWithGoogle = async (nextPath = "/dashboard") => {
@@ -657,7 +637,6 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         jobs,
         orders,
         toggleAccentTheme,
-        signInDemo,
         signOutDemo,
         signInWithGoogle,
         signOut,

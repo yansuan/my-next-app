@@ -9,7 +9,6 @@ import {
   ShieldCheck,
   LogOut,
   Save,
-  Sparkles,
   Zap,
   CreditCard,
   Palette,
@@ -17,7 +16,6 @@ import {
   CheckCircle2,
   AlertCircle,
   Layers,
-  ShieldAlert,
 } from "lucide-react";
 import { useWallet } from "@/context/WalletContext";
 
@@ -113,13 +111,6 @@ export default function ProfilePage() {
             >
               Continue with Google
             </button>
-            <Link
-              href="/auth?next=/profile"
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#D4FF00] px-5 py-3 text-sm font-extrabold text-black hover:bg-[#e2ff3e] transition-colors"
-            >
-              <Sparkles className="h-4 w-4" />
-              Sign in with Email
-            </Link>
           </div>
           {errorMsg && (
             <div className="mt-3 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3.5 py-2.5 text-xs text-rose-200">
@@ -377,14 +368,7 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <div className="pt-2 border-t border-white/10 flex items-center justify-between text-xs">
-              <Link
-                href="/admin/signup-abuse"
-                className="inline-flex items-center gap-1.5 text-zinc-400 hover:text-[#D4FF00]"
-              >
-                <ShieldAlert className="h-3.5 w-3.5" />
-                Admin Console
-              </Link>
+            <div className="pt-2 border-t border-white/10 flex items-center justify-end text-xs">
               <Link
                 href="/dashboard"
                 className="inline-flex items-center gap-1 font-semibold text-[#D4FF00] hover:underline"

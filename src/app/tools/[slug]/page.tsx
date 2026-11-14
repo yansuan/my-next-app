@@ -281,7 +281,7 @@ export default function ToolWorkspacePage({
             providerRouted: pollData.output?.provider_routed,
             createdAt: new Date().toLocaleTimeString(),
           });
-        } else if (pollData.status === "failed" || attempts > 12) {
+        } else if (pollData.status === "failed" || attempts > 60) {
           clearInterval(pollInterval);
           const errMsg =
             pollData.error?.message ||
@@ -309,7 +309,7 @@ export default function ToolWorkspacePage({
             createdAt: new Date().toLocaleTimeString(),
           });
         }
-      }, 1100);
+      }, 2000);
     } catch (e: unknown) {
       refundCredits(
         liveCreditsCost,
@@ -322,8 +322,22 @@ export default function ToolWorkspacePage({
     }
   };
 
+  const isVideoFileUrl = (url?: string) =>
+    Boolean(url && /\.(mp4|webm|mov)(\?|$)/i.test(url));
+  const isAudioFileUrl = (url?: string) =>
+    Boolean(url && /\.(mp3|wav|ogg|m4a|aac)(\?|$)/i.test(url));
+
+  const activeAudioUrl =
+    jobState.status === "succeeded" &&
+    (isAudioFileUrl(jobState.outputUrl) || currentTool.category === "audio")
+      ? jobState.outputUrl
+      : undefined;
+
   const activeVideoUrl =
-    jobState.status === "succeeded" && jobState.outputUrl?.endsWith(".mp4")
+    jobState.status === "succeeded" &&
+    jobState.outputUrl &&
+    (isVideoFileUrl(jobState.outputUrl) ||
+      (currentTool.category === "video" && !isAudioFileUrl(jobState.outputUrl)))
       ? jobState.outputUrl
       : customPreviewVideo ||
         selectedModel.previewVideo ||
@@ -333,7 +347,8 @@ export default function ToolWorkspacePage({
   const activePosterUrl =
     jobState.status === "succeeded" &&
     jobState.outputUrl &&
-    !jobState.outputUrl.endsWith(".mp4")
+    !isVideoFileUrl(jobState.outputUrl) &&
+    !isAudioFileUrl(jobState.outputUrl)
       ? jobState.outputUrl
       : customPreviewPoster ||
         selectedModel.previewPoster ||
@@ -351,8 +366,7 @@ export default function ToolWorkspacePage({
     challengerModel.previewPoster || "/examples/videos/hero-2-poster.webp";
 
   const showVideoPlayer =
-    currentTool.category === "video" ||
-    Boolean(jobState.outputUrl && jobState.outputUrl.endsWith(".mp4"));
+    currentTool.category === "video" || isVideoFileUrl(jobState.outputUrl);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-10">
@@ -833,7 +847,22 @@ export default function ToolWorkspacePage({
               {(jobState.status === "idle" ||
                 jobState.status === "succeeded") && (
                 <>
-                  {showVideoPlayer ? (
+                  {activeAudioUrl ? (
+                    <div className="relative flex h-full w-full flex-col items-center justify-center bg-gradient-to-br from-[#121622] via-[#0B0D14] to-black p-6">
+                      <img
+                        src={activePosterUrl}
+                        alt={currentTool.name}
+                        className="mb-4 h-36 w-full max-w-md rounded-xl object-cover border border-white/10 opacity-90"
+                      />
+                      <audio
+                        key={activeAudioUrl}
+                        src={activeAudioUrl}
+                        controls
+                        autoPlay
+                        className="w-full max-w-md"
+                      />
+                    </div>
+                  ) : showVideoPlayer ? (
                     <video
                       key={activeVideoUrl}
                       src={activeVideoUrl}

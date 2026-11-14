@@ -8,7 +8,6 @@ import {
   Zap,
   ArrowRight,
   Sparkles,
-  ShieldAlert,
   CreditCard,
   CheckCircle2,
   User,
@@ -95,16 +94,9 @@ export default function DashboardPage() {
               className="inline-flex items-center gap-2 rounded-xl border border-[#D4FF00]/40 bg-[#D4FF00]/10 px-4 py-2.5 text-xs font-bold text-[#D4FF00] hover:bg-[#D4FF00]/20"
             >
               <LogIn className="h-4 w-4" />
-              Sign in (Google / Email)
+              Sign in with Google
             </Link>
           )}
-          <Link
-            href="/admin/signup-abuse"
-            className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-4 py-2.5 text-xs font-semibold text-zinc-200 hover:bg-white/10"
-          >
-            <ShieldAlert className="h-4 w-4 text-[#D4FF00]" />
-            Admin Console
-          </Link>
           <Link
             href="/for-agents"
             className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-4 py-2.5 text-xs font-semibold text-white hover:bg-white/10"
@@ -259,12 +251,6 @@ export default function DashboardPage() {
         <div>
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-white">Billing Orders &amp; Subscriptions</h2>
-            <Link
-              href="/admin/orders"
-              className="text-xs font-semibold text-zinc-400 hover:text-[#D4FF00]"
-            >
-              Inspect in Admin Orders →
-            </Link>
           </div>
           <div className="mt-4 overflow-x-auto rounded-2xl border border-white/10 bg-[#0C0E14]">
             <table className="w-full text-left text-sm">

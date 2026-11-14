@@ -131,40 +131,65 @@ export async function createYirJob(payload: YirJobRequest): Promise<YirJobRespon
     };
 
     try {
-      const res = await fetch(`${YIR_BASE_URL}${endpointPath}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.YIR_API_KEY}`,
-        },
-        body: JSON.stringify(requestBody),
-      });
+      const sendCreate = async (bodyObj: Record<string, unknown>) =>
+        fetch(`${YIR_BASE_URL}${endpointPath}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${process.env.YIR_API_KEY}`,
+            "Idempotency-Key": crypto.randomUUID(),
+          },
+          body: JSON.stringify(bodyObj),
+        });
 
-      if (res.ok) {
-        const raw = await res.json();
-        const jobId = raw.id || raw.job_id;
-        if (jobId) {
-          return {
-            id: jobId,
-            object: "job",
-            status: normalizeYirStatus(raw.status),
-            model: raw.model || payload.model,
-            created_at:
-              typeof raw.created_at === "number"
-                ? raw.created_at
-                : Math.floor(Date.now() / 1000),
-            output: extractYirOutput(raw, spec?.provider),
-            error: raw.error || null,
-            urls: {
-              get: `/v1/jobs/${jobId}`,
-              cancel: `/v1/jobs/${jobId}/cancel`,
-            },
-            simulated: false,
+      let res = await sendCreate(requestBody);
+
+      // Auto-adapt if an upstream model requires a specific allowed resolution/duration enum (e.g. bfl/flux-2-max -> "1MP")
+      if (!res.ok && res.status === 400) {
+        const errBody = await res.json().catch(() => null);
+        const detail = errBody?.error?.details?.[0];
+        if (detail?.field?.startsWith("parameters.") && Array.isArray(detail.allowed) && detail.allowed[0] !== undefined) {
+          const paramKey = detail.field.replace("parameters.", "");
+          const adjustedParams = {
+            ...(requestBody.parameters as Record<string, unknown>),
+            [paramKey]: detail.allowed[0],
           };
+          requestBody.parameters = adjustedParams;
+          res = await sendCreate(requestBody);
+        } else if (errBody?.error?.message) {
+          throw new Error(`Yir.ai ${res.status}: ${errBody.error.message}`);
         }
       }
-    } catch {
-      // Fall back to deterministic studio preview if upstream network fails
+
+      if (!res.ok) {
+        const errText = await res.text().catch(() => "");
+        throw new Error(`Yir.ai API error (${res.status}): ${errText || res.statusText}`);
+      }
+
+      const raw = await res.json();
+      const jobId = raw.id || raw.job_id;
+      if (!jobId) {
+        throw new Error("Yir.ai API did not return a job ID.");
+      }
+      return {
+        id: jobId,
+        object: "job",
+        status: normalizeYirStatus(raw.status),
+        model: raw.model || payload.model,
+        created_at:
+          typeof raw.created_at === "number"
+            ? raw.created_at
+            : Math.floor(Date.now() / 1000),
+        output: extractYirOutput(raw, spec?.provider),
+        error: raw.error || null,
+        urls: {
+          get: `/v1/jobs/${jobId}`,
+          cancel: `/v1/jobs/${jobId}/cancel`,
+        },
+        simulated: false,
+      };
+    } catch (err) {
+      throw err instanceof Error ? err : new Error("Failed to dispatch Yir.ai job");
     }
   }
 
@@ -181,6 +206,7 @@ function normalizeYirStatus(
       return "succeeded";
     case "processing":
     case "running":
+    case "delivering":
     case "in_progress":
     case "starting":
       return "processing";
@@ -208,7 +234,8 @@ function extractYirOutput(
       media_url: firstFile.url,
       thumbnail_url: firstFile.thumbnail_url || firstFile.url,
       duration_sec: firstFile.duration || undefined,
-      provider_routed: raw.channel?.provider_label || fallbackProvider || "ReelMux Cloud",
+      provider_routed:
+        raw.final_provider || raw.channel?.provider_label || fallbackProvider || "ReelMux Cloud",
     };
   }
   return null;
