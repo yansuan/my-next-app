@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminStore, AdminOrderRecord } from "@/lib/admin/store";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
+import { createWaffoClient, getWaffoConfig } from "@/lib/waffo/client";
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,7 +13,7 @@ export async function POST(req: NextRequest) {
       itemType = "credit_pack",
       amountUsd = 29,
       creditsGranted = 3200,
-      paymentMethod = "Visa •••• 4242",
+      paymentMethod = "Waffo Pancake (pancake.waffo.ai)",
     } = body;
 
     const ipAddress =
@@ -20,10 +21,42 @@ export async function POST(req: NextRequest) {
       req.headers.get("x-real-ip") ||
       "103.149.28.11";
 
-    const nowIso = new Date().toISOString().replace("T", " ").slice(0, 16) + " UTC";
+    const nowIso =
+      new Date().toISOString().replace("T", " ").slice(0, 16) + " UTC";
     const randSuffix = Math.floor(1000 + Math.random() * 9000);
     const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, "");
     const orderNo = `RMX-${datePart}-${randSuffix}`;
+
+    // 1. Attempt live Waffo Pancake Authenticated Session creation if credentials exist
+    const waffoCfg = getWaffoConfig();
+    const waffoClient = createWaffoClient();
+    const mappedProductId = waffoCfg.productMap[itemId] || "";
+    let waffoCheckoutUrl = `https://pancake.waffo.ai/checkout/${
+      waffoCfg.storeSlug || "reelmux"
+    }/${mappedProductId || itemId}?currency=USD&email=${encodeURIComponent(
+      userEmail
+    )}&success_url=${encodeURIComponent(
+      `https://reelmux.com/dashboard?payment=success&order=${orderNo}`
+    )}`;
+    let waffoSessionLive = false;
+
+    if (waffoClient && mappedProductId.startsWith("PROD_")) {
+      try {
+        const session = await waffoClient.checkout.authenticated.create({
+          productId: mappedProductId,
+          currency: "USD",
+          buyerIdentity: String(userEmail),
+          buyerEmail: String(userEmail),
+          orderMerchantExternalId: orderNo,
+        });
+        if (session?.checkoutUrl) {
+          waffoCheckoutUrl = session.checkoutUrl;
+          waffoSessionLive = true;
+        }
+      } catch {
+        // Fallback to direct Waffo Pancake storefront link
+      }
+    }
 
     const newOrder: AdminOrderRecord = {
       id: `ord-${Date.now()}`,
@@ -87,11 +120,16 @@ export async function POST(req: NextRequest) {
     store.auditLogs.unshift({
       id: `aud-${Date.now()}`,
       actorEmail: userEmail,
-      action: itemType === "subscription" ? "subscription.activated" : "order.completed",
+      action:
+        itemType === "subscription"
+          ? "subscription.activated"
+          : "order.completed",
       targetType: "order",
       targetId: orderNo,
       summary: `${
-        itemType === "subscription" ? "Activated subscription" : "Purchased credit pack"
+        itemType === "subscription"
+          ? "Activated subscription"
+          : "Purchased credit pack"
       } ${itemName} (+${Number(creditsGranted).toLocaleString()} credits, $${Number(
         amountUsd
       ).toFixed(2)} USD via ${paymentMethod}).`,
@@ -99,7 +137,6 @@ export async function POST(req: NextRequest) {
       createdAt: nowIso,
     });
 
-    // Optional: also persist to Supabase billing_orders table if service key is configured
     try {
       const supabase = createSupabaseServiceClient();
       if (supabase) {
@@ -116,12 +153,14 @@ export async function POST(req: NextRequest) {
         });
       }
     } catch {
-      // Non-blocking fallback to in-memory store
+      // Non-blocking fallback
     }
 
     return NextResponse.json({
       ok: true,
       order: newOrder,
+      waffoCheckoutUrl,
+      waffoSessionLive,
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Checkout failed";

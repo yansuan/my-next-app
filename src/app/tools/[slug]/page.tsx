@@ -74,6 +74,10 @@ export default function ToolWorkspacePage({
   const [simulateFailMode, setSimulateFailMode] = useState(false);
   const [customPreviewVideo, setCustomPreviewVideo] = useState<string | null>(null);
   const [customPreviewPoster, setCustomPreviewPoster] = useState<string | null>(null);
+  const [arenaMode, setArenaMode] = useState(searchParams.get("arena") === "true");
+  const [challengerModelId, setChallengerModelId] = useState(
+    compatibleModels[1]?.id || "kling-4.0"
+  );
 
   const [jobState, setJobState] = useState<{
     status: "idle" | "queued" | "processing" | "succeeded" | "failed";
@@ -114,6 +118,9 @@ export default function ToolWorkspacePage({
     const qPrompt = searchParams.get("prompt");
     if (qPrompt) {
       setPrompt(qPrompt);
+    }
+    if (searchParams.get("arena") === "true") {
+      setArenaMode(true);
     }
     setCustomPreviewVideo(null);
     setCustomPreviewPoster(null);
@@ -335,6 +342,16 @@ export default function ToolWorkspacePage({
         selectedModel.previewPoster ||
         currentTool.previewImage ||
         "/examples/seedance-2-5-train.webp";
+
+  const challengerModel =
+    compatibleModels.find((m) => m.id === challengerModelId) ??
+    compatibleModels[1] ??
+    selectedModel;
+
+  const challengerVideoUrl =
+    challengerModel.previewVideo || "/examples/videos/hero-2.mp4";
+  const challengerPosterUrl =
+    challengerModel.previewPoster || "/examples/videos/hero-2-poster.webp";
 
   const showVideoPlayer =
     currentTool.category === "video" ||
@@ -691,21 +708,110 @@ export default function ToolWorkspacePage({
         <div className="lg:col-span-7 flex flex-col gap-6">
           {/* Active Output / Featured Preview Card */}
           <div className="rounded-2xl border border-white/10 bg-[#0C0E14] p-5 shadow-xl">
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
               <div className="flex items-center gap-2">
                 <span className="h-2.5 w-2.5 rounded-full bg-[#D4FF00] animate-pulse" />
                 <span className="text-xs font-bold uppercase tracking-wider text-zinc-300">
-                  {jobState.status === "idle"
+                  {arenaMode
+                    ? `Dual-Model Split Arena · ${selectedModel.name} vs ${challengerModel.name}`
+                    : jobState.status === "idle"
                     ? `Live Output Preview · ${selectedModel.name}`
                     : `Job Status: ${jobState.status.toUpperCase()}`}
                 </span>
               </div>
-              <span className="rounded-full bg-[#D4FF00]/15 border border-[#D4FF00]/30 px-2.5 py-0.5 text-xs font-bold text-[#D4FF00]">
-                {liveCreditsCost} credits
-              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setArenaMode((v) => !v)}
+                  className={`rounded-lg border px-2.5 py-1 text-xs font-bold transition-all cursor-pointer ${
+                    arenaMode
+                      ? "border-cyan-400 bg-cyan-400/20 text-cyan-200"
+                      : "border-white/15 bg-white/[0.04] text-zinc-300 hover:border-cyan-400/40 hover:text-white"
+                  }`}
+                >
+                  ⚔️ {arenaMode ? "Exit A/B Arena" : "Dual-Model A/B Arena"}
+                </button>
+                <span className="rounded-full bg-[#D4FF00]/15 border border-[#D4FF00]/30 px-2.5 py-0.5 text-xs font-bold text-[#D4FF00]">
+                  {liveCreditsCost} credits
+                </span>
+              </div>
             </div>
 
+            {arenaMode && (
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-cyan-400/25 bg-cyan-400/[0.06] px-3.5 py-2 text-xs">
+                <span className="text-cyan-200 font-semibold">
+                  Compare side-by-side output against Challenger Model B:
+                </span>
+                <select
+                  value={challengerModel.id}
+                  onChange={(e) => setChallengerModelId(e.target.value)}
+                  className="rounded-lg border border-cyan-400/40 bg-[#0B0E17] px-2.5 py-1 text-xs font-bold text-cyan-200 focus:outline-none"
+                >
+                  {compatibleModels.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      Model B: {m.name} ({m.baseCredits}c)
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             {/* Canvas Viewport */}
+            {arenaMode ? (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {/* Left Arena Pane: Model A */}
+                <div className="relative aspect-video overflow-hidden rounded-xl border border-[#D4FF00]/40 bg-black">
+                  {showVideoPlayer ? (
+                    <video
+                      key={activeVideoUrl}
+                      src={activeVideoUrl}
+                      poster={activePosterUrl}
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                      controls
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <img
+                      src={activePosterUrl}
+                      alt={selectedModel.name}
+                      className="h-full w-full object-cover"
+                    />
+                  )}
+                  <div className="pointer-events-none absolute left-2.5 top-2.5 rounded-md bg-black/80 px-2.5 py-1 text-[11px] font-bold text-[#D4FF00] border border-[#D4FF00]/30">
+                    MODEL A: {selectedModel.name} ({selectedModel.baseCredits}c)
+                  </div>
+                </div>
+
+                {/* Right Arena Pane: Model B */}
+                <div className="relative aspect-video overflow-hidden rounded-xl border border-cyan-400/40 bg-black">
+                  {showVideoPlayer ? (
+                    <video
+                      key={challengerVideoUrl}
+                      src={challengerVideoUrl}
+                      poster={challengerPosterUrl}
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                      controls
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <img
+                      src={challengerPosterUrl}
+                      alt={challengerModel.name}
+                      className="h-full w-full object-cover"
+                    />
+                  )}
+                  <div className="pointer-events-none absolute left-2.5 top-2.5 rounded-md bg-black/80 px-2.5 py-1 text-[11px] font-bold text-cyan-300 border border-cyan-400/30">
+                    MODEL B: {challengerModel.name} ({challengerModel.baseCredits}c)
+                  </div>
+                </div>
+              </div>
+            ) : (
             <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-white/10 bg-black flex items-center justify-center">
               {(jobState.status === "queued" ||
                 jobState.status === "processing") && (
@@ -779,6 +885,7 @@ export default function ToolWorkspacePage({
                 </>
               )}
             </div>
+            )}
 
             {/* Prompt Remix Bar */}
             <div className="mt-4 flex flex-col gap-3 rounded-xl border border-white/10 bg-white/[0.02] p-3.5 sm:flex-row sm:items-center sm:justify-between">

@@ -34,6 +34,11 @@ export default function HomePage() {
 
   const [activeSampleIndex, setActiveSampleIndex] = useState(0);
   const [toolFilter, setToolFilter] = useState<"all" | "video" | "image" | "audio">("all");
+  const [deckMode, setDeckMode] = useState<"video" | "image" | "storyboard" | "arena">("video");
+  const [deckPrompt, setDeckPrompt] = useState(
+    "Anamorphic drone tracking shot over rain-slicked Neo-Tokyo neon rooftops at midnight, 24fps cinema grain"
+  );
+  const [deckModel, setDeckModel] = useState("seedance-2-5");
 
   // Randomize the hero background video on every page open (matching FrameMux behavior)
   useEffect(() => {
@@ -128,24 +133,24 @@ export default function HomePage() {
           {/* Quick Release Pills */}
           <div className="flex flex-wrap items-center justify-center gap-2.5 mb-7">
             <Link
-              href="/tools/text-to-image?model=minimax-h3-image"
-              className="group inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/50 backdrop-blur-xl px-3.5 py-1 text-xs font-medium text-zinc-100 hover:border-[#D4FF00]/60 hover:bg-black/70 transition-all"
+              href="/storyboard"
+              className="group inline-flex items-center gap-2 rounded-full border border-cyan-400/40 bg-black/60 backdrop-blur-xl px-3.5 py-1 text-xs font-medium text-cyan-100 hover:border-cyan-300 hover:bg-black/80 transition-all"
             >
-              <span className="rounded-full bg-[#D4FF00] px-1.5 py-0.5 text-[10px] font-extrabold text-black">
-                NEW
+              <span className="rounded-full bg-cyan-400 px-1.5 py-0.5 text-[10px] font-extrabold text-black">
+                EXCLUSIVE
               </span>
-              <span>MiniMax H3 Image · 4 credits</span>
-              <ArrowRight className="h-3 w-3 text-zinc-300 group-hover:translate-x-0.5 transition-transform" />
+              <span>4-Shot Multi-Model Storyboard Sequencer</span>
+              <ArrowRight className="h-3 w-3 text-cyan-300 group-hover:translate-x-0.5 transition-transform" />
             </Link>
 
             <Link
-              href="/tools/text-to-video?model=seedance-2.5"
-              className="group inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/50 backdrop-blur-xl px-3.5 py-1 text-xs font-medium text-zinc-100 hover:border-rose-500/60 hover:bg-black/70 transition-all"
+              href="/tools/text-to-video?model=seedance-2-5&arena=true"
+              className="group inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/50 backdrop-blur-xl px-3.5 py-1 text-xs font-medium text-zinc-100 hover:border-[#D4FF00]/60 hover:bg-black/70 transition-all"
             >
-              <span className="rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-extrabold text-white">
-                HOT
+              <span className="rounded-full bg-[#D4FF00] px-1.5 py-0.5 text-[10px] font-extrabold text-black">
+                ARENA
               </span>
-              <span>Seedance 2.5 Multi-Shot + Audio</span>
+              <span>Dual-Model A/B Split-Screen Compare</span>
               <ArrowRight className="h-3 w-3 text-zinc-300 group-hover:translate-x-0.5 transition-transform" />
             </Link>
           </div>
@@ -153,55 +158,150 @@ export default function HomePage() {
           {/* Main Headline */}
           <div className="mx-auto max-w-4xl text-center">
             <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-6xl lg:text-7xl leading-[1.05] drop-shadow-sm">
-              Create videos, images and audio{" "}
-              <span className="bg-gradient-to-r from-[#D4FF00] via-lime-300 to-cyan-300 bg-clip-text text-transparent">
-                with the latest AI models
+              Direct multi-shot cinema,{" "}
+              <span className="bg-gradient-to-r from-cyan-300 via-[#D4FF00] to-emerald-300 bg-clip-text text-transparent">
+                images &amp; sound on one stage
               </span>
             </h1>
             <p className="mx-auto mt-5 max-w-2xl text-base sm:text-lg text-zinc-200 leading-relaxed">
-              One credit balance for creators and marketers to use every major model — including
-              Kling 4.0, Seedance 2.5, Veo 3.1, Wan 3.0, GPT Image 2.6, FLUX.2 and Suno. Free to
-              try: new accounts get 100 credits with no card.
+              The AI Multiplexer Studio for filmmakers and creative teams. Sequence 4-shot
+              storyboards, run side-by-side model arenas across Kling 4.0, Seedance 2.5, Veo 3.1,
+              Wan 3.0, FLUX.2 &amp; Suno v6, and pay with one escrow-backed balance.
             </p>
 
+            {/* ===============================================================
+                REELMUX DIRECTOR'S INSTANT COMMAND DECK (Unique to ReelMux)
+               =============================================================== */}
+            <div className="mx-auto mt-8 max-w-3xl rounded-2xl border border-cyan-400/35 bg-[#090C14]/90 p-3.5 sm:p-4 text-left shadow-2xl shadow-cyan-950/40 backdrop-blur-2xl">
+              {/* Mode Switcher Tabs */}
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {[
+                    { id: "video", label: "🎬 Cinema Video" },
+                    { id: "storyboard", label: "🎞️ 4-Shot Storyboard" },
+                    { id: "arena", label: "⚔️ Dual-Model Arena" },
+                    { id: "image", label: "🖼️ 4K Keyframe" },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() =>
+                        setDeckMode(tab.id as "video" | "image" | "storyboard" | "arena")
+                      }
+                      className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+                        deckMode === tab.id
+                          ? "bg-gradient-to-r from-cyan-400 to-[#D4FF00] text-black shadow-sm"
+                          : "bg-white/[0.04] text-zinc-300 hover:bg-white/10 hover:text-white"
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+                <span className="font-mono text-[11px] text-cyan-300">
+                  ESCROW PROTECTED · 24FPS
+                </span>
+              </div>
+
+              {/* Prompt Input + Model Selector + Launch Button */}
+              <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
+                <input
+                  type="text"
+                  value={deckPrompt}
+                  onChange={(e) => setDeckPrompt(e.target.value)}
+                  placeholder="Describe your scene, camera rig, lighting, and atmosphere..."
+                  className="flex-1 rounded-xl border border-white/15 bg-black/60 px-3.5 py-2.5 text-xs sm:text-sm text-white placeholder-zinc-500 focus:border-cyan-400 focus:outline-none"
+                />
+                <select
+                  value={deckModel}
+                  onChange={(e) => setDeckModel(e.target.value)}
+                  className="rounded-xl border border-white/15 bg-[#121622] px-3 py-2.5 text-xs font-bold text-cyan-200 focus:border-cyan-400 focus:outline-none"
+                >
+                  <option value="seedance-2-5">Seedance 2.5 (18c)</option>
+                  <option value="veo-3-1">Google Veo 3.1 (22c)</option>
+                  <option value="kling-4-0">Kling 4.0 Master (20c)</option>
+                  <option value="wan-3-0">Alibaba Wan 3.0 (14c)</option>
+                  <option value="sora-2">OpenAI Sora 2 (25c)</option>
+                </select>
+                <Link
+                  href={
+                    deckMode === "storyboard"
+                      ? "/storyboard"
+                      : deckMode === "image"
+                      ? `/tools/text-to-image?prompt=${encodeURIComponent(deckPrompt)}`
+                      : `/tools/text-to-video?model=${deckModel}${
+                          deckMode === "arena" ? "&arena=true" : ""
+                        }&prompt=${encodeURIComponent(deckPrompt)}`
+                  }
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#D4FF00] to-[#6EE7B7] px-5 py-2.5 text-xs sm:text-sm font-extrabold text-black hover:brightness-105 shrink-0"
+                >
+                  <Sparkles className="h-4 w-4" />
+                  {deckMode === "storyboard"
+                    ? "Open Storyboard"
+                    : deckMode === "arena"
+                    ? "Launch A/B Arena"
+                    : "Direct Scene"}
+                </Link>
+              </div>
+
+              {/* 1-Click Prompt Presets */}
+              <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-[11px]">
+                <span className="text-zinc-500 font-semibold">Presets:</span>
+                {[
+                  "Anamorphic drone orbit over rain-slicked Neo-Tokyo towers",
+                  "1000fps Phantom macro molten gold droplets in zero gravity",
+                  "Bioluminescent submersible diving into Europa glacial trench",
+                ].map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setDeckPrompt(p)}
+                    className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-0.5 text-zinc-300 hover:border-cyan-400/40 hover:text-cyan-200 truncate max-w-[220px] cursor-pointer"
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Primary & Secondary CTAs */}
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-3.5">
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
               <Link
-                href="/tools/text-to-video"
-                className="inline-flex items-center gap-2.5 rounded-xl bg-[#D4FF00] px-7 py-3.5 text-sm sm:text-base font-bold text-black shadow-lg shadow-[#D4FF00]/25 hover:bg-[#e2ff3e] active:scale-[0.98] transition-all"
+                href="/storyboard"
+                className="inline-flex items-center gap-2 rounded-xl bg-cyan-400/15 border border-cyan-400/40 px-5 py-2.5 text-xs sm:text-sm font-bold text-cyan-200 backdrop-blur-xl hover:bg-cyan-400/25 transition-all"
               >
-                <Video className="h-5 w-5" />
-                Create a video
+                <Layers className="h-4 w-4 text-cyan-300" />
+                4-Shot Storyboard Sequencer
               </Link>
               <Link
-                href="/tools/text-to-image"
-                className="inline-flex items-center gap-2.5 rounded-xl border border-white/20 bg-black/55 px-7 py-3.5 text-sm sm:text-base font-semibold text-white backdrop-blur-xl hover:bg-black/80 active:scale-[0.98] transition-all"
+                href="/tools/text-to-video?arena=true"
+                className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-black/55 px-5 py-2.5 text-xs sm:text-sm font-semibold text-white backdrop-blur-xl hover:bg-black/80 transition-all"
               >
-                <ImageIcon className="h-5 w-5 text-[#D4FF00]" />
-                Create an image
+                <Cpu className="h-4 w-4 text-[#D4FF00]" />
+                Dual-Model Split-Screen Arena
               </Link>
               <Link
                 href="/ai-effects"
-                className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-black/40 px-5 py-3.5 text-sm sm:text-base font-medium text-zinc-200 backdrop-blur-xl hover:border-white/30 hover:text-white transition-all"
+                className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-black/40 px-5 py-2.5 text-xs sm:text-sm font-medium text-zinc-200 backdrop-blur-xl hover:border-white/30 hover:text-white transition-all"
               >
                 <Wand2 className="h-4 w-4 text-[#D4FF00]" />
-                AI Video Effects
+                20 AI Video Effects
               </Link>
             </div>
 
             {/* Assurance Micro-Copy */}
-            <div className="mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-xs text-zinc-300">
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-xs text-zinc-300">
               <span className="inline-flex items-center gap-1.5">
-                <CheckCircle2 className="h-3.5 w-3.5 text-[#D4FF00]" />
-                100 free credits
+                <CheckCircle2 className="h-3.5 w-3.5 text-cyan-400" />
+                100 free starter credits
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <CheckCircle2 className="h-3.5 w-3.5 text-[#D4FF00]" />
-                No card needed
+                Waffo Pancake Global Checkout
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <CheckCircle2 className="h-3.5 w-3.5 text-[#D4FF00]" />
-                Credits back on failed jobs
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                Automatic escrow refund on failed jobs
               </span>
             </div>
           </div>

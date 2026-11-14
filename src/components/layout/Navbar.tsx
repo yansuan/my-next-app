@@ -93,27 +93,25 @@ export function Navbar() {
 
   const signalBg =
     accentTheme === "lime"
-      ? "bg-[#D4FF00] text-zinc-950"
+      ? "bg-gradient-to-r from-[#D4FF00] via-[#8BFF65] to-cyan-300 text-zinc-950"
       : "bg-gradient-to-r from-cyan-400 via-sky-400 to-violet-400 text-zinc-950";
-
-  const signalStroke = accentTheme === "lime" ? "#D4FF00" : "#00F0FF";
 
   return (
     <header className="sticky top-0 z-50 w-full">
-      {/* 1. FrameMux 1:1 Signal Top Announcement Banner */}
+      {/* 1. ReelMux Cyber-Prism Top Announcement Banner */}
       {bannerVisible && (
         <div
           className={`relative flex items-center justify-center px-4 py-2 text-xs sm:text-sm font-medium transition-colors ${signalBg}`}
         >
           <div className="flex flex-wrap items-center justify-center gap-2.5">
-            <span className="font-semibold tracking-tight">
-              ⚡ MiniMax H3 Image &amp; Seedance 2.5 are live on ReelMux, from 4 credits
+            <span className="font-bold tracking-tight">
+              🎬 NEW: AI 4-Shot Storyboard Director &amp; Dual-Model A/B Arena are live on ReelMux
             </span>
             <Link
-              href="/tools/text-to-image?model=minimax-h3-image"
+              href="/storyboard"
               className="inline-flex items-center gap-1 rounded-full bg-black px-3 py-0.5 text-xs font-semibold text-white hover:bg-zinc-800 transition-colors"
             >
-              Try it
+              Launch Storyboard
               <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
@@ -206,7 +204,23 @@ export function Navbar() {
               />
             </button>
 
-            {/* 4. AI Effects Direct Link */}
+            {/* 4. Storyboard Director Direct Link */}
+            <Link
+              href="/storyboard"
+              onMouseEnter={() => setOpenMenu(null)}
+              className={`flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors duration-200 ${
+                pathname === "/storyboard"
+                  ? "bg-cyan-400/15 text-cyan-200 border border-cyan-400/30"
+                  : "text-zinc-200 hover:bg-white/10 hover:text-white"
+              }`}
+            >
+              <span>Storyboard</span>
+              <span className="rounded bg-cyan-400/20 px-1.5 py-0.2 text-[9px] font-extrabold uppercase text-cyan-300">
+                PRO
+              </span>
+            </Link>
+
+            {/* 5. AI Effects Direct Link */}
             <Link
               href="/ai-effects"
               onMouseEnter={() => setOpenMenu(null)}
@@ -667,6 +681,9 @@ export function Navbar() {
               </div>
             </div>
             <div className="flex flex-wrap gap-3 pt-2 border-t border-white/10 text-sm font-medium text-zinc-300">
+              <Link href="/storyboard" className="text-cyan-300 font-bold hover:text-white">
+                Storyboard Director
+              </Link>
               <Link href="/ai-effects" className="hover:text-white">
                 AI Effects
               </Link>

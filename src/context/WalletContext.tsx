@@ -78,7 +78,9 @@ interface WalletContextValue {
   settleCredits: (cost: number, note: string) => void;
   refundCredits: (cost: number, note: string) => void;
   addCreditsPack: (credits: number, packName: string) => void;
-  completeCheckout: (payload: CheckoutPayload) => Promise<{ orderNo: string }>;
+  completeCheckout: (
+    payload: CheckoutPayload
+  ) => Promise<{ orderNo: string; waffoCheckoutUrl?: string }>;
   cancelSubscription: () => void;
   upsertJob: (job: JobRecord) => void;
 }
@@ -291,11 +293,12 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
   const completeCheckout = async (
     payload: CheckoutPayload
-  ): Promise<{ orderNo: string }> => {
+  ): Promise<{ orderNo: string; waffoCheckoutUrl?: string }> => {
     const email = userEmail || "creator@reelmux.com";
     let orderNo = `RMX-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${Math.floor(
       1000 + Math.random() * 9000
     )}`;
+    let waffoCheckoutUrl: string | undefined;
 
     try {
       const res = await fetch("/api/billing/checkout", {
@@ -314,6 +317,9 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       const data = await res.json();
       if (data?.order?.orderNo) {
         orderNo = data.order.orderNo;
+      }
+      if (data?.waffoCheckoutUrl) {
+        waffoCheckoutUrl = data.waffoCheckoutUrl;
       }
     } catch {
       // Fallback to client orderNo if offline
@@ -370,7 +376,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       ...prev,
     ]);
 
-    return { orderNo };
+    return { orderNo, waffoCheckoutUrl };
   };
 
   const cancelSubscription = () => {
