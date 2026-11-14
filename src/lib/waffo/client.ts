@@ -70,37 +70,44 @@ export function getWaffoConfig(): WaffoRuntimeConfig {
   const merchantId =
     override.merchantId ||
     process.env.WAFFO_MERCHANT_ID ||
-    (environment === "test" ? "MER_test_reelmux_studio" : "");
+    (environment === "test" ? "MER_70f7QROZ0K72cV3jTT8SCx" : "");
+
+  const defaultTestPrivateKey =
+    "MIIEuwIBADANBgkqhkiG9w0BAQEFAASCBKUwggShAgEAAoIBAQDcKpMeqznrS+Hz0gkVRrhPp554CNLQyPLUvVoplQRGof7lKtVGLgAx9ESuW7RbEsOp+n4iVuoDIIGbLcOpQPuJBQrSe7FOv4iMUDhg3UdbRWHFIMi5a/2JUwVE3bFoSEAKT4WOnOym88Ww+RIgaakH8sPaq7siM3z42GYgppN0Un5/3UQW5SwpwAHhaISZndnIe5NrlWyXCEivLFdNwvlmaJ5BNdJw90H1E/HKc0Yrc91lKwt9NaheoqtY/YMrYkhijyI4AsRkyqKStZQX0iWXIcfyFZDEUDH4ra3PqlK266SBAVA54ZLDAElfmaRteqbba4MRhVEd+jUGrtLoqG8NAgMBAAECgf8HCaqyzAIjS+eLAZZzaLn7jZeYi3x19Fzf3vp2DQTegWjCWYbVoiLOZOszhX8xnUoS09m0WOg7sVsd69RREHotHpF5/k+OyjK5ntbZMMIj+dPMqExs9kbCXQLjcKo22hhlKunaB1TNifTMFZCLkkyMZ7H0pRnA8VNV5VCzwwXI+pet1ZbrOn6TbmGdh5NcSpc06E2eXzvOS67PevkK9bOKSJzLYVwjkA0J8Fsxq94pBgPwDAmQhIpYJChzBA5soSUZ39kiaQ2w1FSLDcQjGy4C0hXOlW+8a1R+S4vaDgBwIEZyL8W+dKBN1k4ZwKisOidNovkSGnYAzbDR0a9ymdECgYEA/4dWXmib737m77f1fuOYrqRnjg/gAsD71vRF8lPVEZYgzmEhTxeiv1ha3UXSpl/NBtHMvn/AB5SQz5QbkbZfvEVexoIhYT0L7f5dhl4mzUHP/VNKr5dsaD41VfS1lIokYXwAezENtzwcygd0tnxhmkgzLE1LgPLw/2IEoR56td0CgYEA3JKJ907UjVgwcB6uOJhKee5vedqo1F7HdCVe1enKHP8nZz2iMWlOkjTDqaWnjZne3gvxEbZkRKYlmVQJ6fGLEa0B+nT2GZr8F/qDjsqyo2V4fifYpBOvJZ6SNxsOLoBfnZHuAXA6dhPEczcOvCOWZt2QrRZNrY2l0VYmppPdgvECgYEA0M2VnQXcToMjUMXA3NQ8YpFDcYm1YmqyH/9x3Mf2Ny23Vw11u3yz56nabi/tJzjnf+gWZ6BamZckEguTz6j4aA9Dl/CkOCI7SlntsKvlBxr9S6MxR3T0B+a1jKyvaFbNzb8XYZM/AvkjCU+4ZpoS45CWCGCNDyz2E6nT4JjYax0CgYAj6hxaz1Qem6BvcR9vCaT+y4sNLURWKAST7c3OSN3m8MjKr6dsIjhv5/V/9wAcN1SplQowlyEmaGMw3xUqKXE6dJAg5tB3hNvNT7YCFxEVN91xtS06MhZPqs0l+drKSY7ICk3VoB90wG05UVqt2aGQqDz5YetN+gVo2305nFPyEQKBgFyKtcbJ27YPWj+92rtUOmAwVnqe+7B7/knIGhHsmf5+UBny7ypd7q3C1tI4xNuzfpximTz7+KHxSf+4oFjgUo7sLBp3XuAJ55Vgc48NX9G1V3hdj91XghWJDXhUg9tcKuMtwqlKrCUDowV45W1byShNiAT3U8C6EajdY0cOq7BI";
 
   const rawPrivateKey =
-    override.privateKey || process.env.WAFFO_PRIVATE_KEY || generated.privateKey;
+    override.privateKey ||
+    process.env.WAFFO_PRIVATE_KEY ||
+    (environment === "test" ? defaultTestPrivateKey : generated.privateKey);
   const privateKey = rawPrivateKey.replace(/\\n/g, "\n");
   const publicKey = override.publicKey || generated.publicKey;
 
   const storeId =
     override.storeId ||
     process.env.WAFFO_STORE_ID ||
-    (environment === "test" ? "STO_test_reelmux_01" : "");
+    (environment === "test" ? "STO_1eOVBHrVdmQG63aIBiw9p0" : "");
 
   const storeSlug =
-    override.storeSlug || process.env.WAFFO_STORE_SLUG || "reelmux";
+    override.storeSlug ||
+    process.env.WAFFO_STORE_SLUG ||
+    "reelmux-szy0tejp";
 
   const defaultProductMap: Record<string, string> = {
     starter:
       process.env.WAFFO_PROD_STARTER ||
-      (environment === "test" ? "PROD_test_starter_990" : ""),
+      (environment === "test" ? "PROD_6cGVCFmfz6AwhcEz4K0Yky" : ""),
     creator:
       process.env.WAFFO_PROD_CREATOR ||
-      (environment === "test" ? "PROD_test_creator_3200" : ""),
+      (environment === "test" ? "PROD_4twLPqkCdOZXvkEiNh9h1K" : ""),
     studio:
       process.env.WAFFO_PROD_STUDIO ||
-      (environment === "test" ? "PROD_test_studio_9500" : ""),
+      (environment === "test" ? "PROD_0xgysK7cCierZOVlxIVzVW" : ""),
     "pro-monthly":
       process.env.WAFFO_PROD_PRO_MONTHLY ||
-      (environment === "test" ? "PROD_test_pro_monthly" : ""),
+      (environment === "test" ? "PROD_3JWtnzieFu8kZwfHl1JcTg" : ""),
     "pro-yearly":
       process.env.WAFFO_PROD_PRO_YEARLY ||
-      (environment === "test" ? "PROD_test_pro_yearly" : ""),
+      (environment === "test" ? "PROD_6O981a9fsCsEn68Lu9g96x" : ""),
     ...(override.productMap || {}),
   };
 
