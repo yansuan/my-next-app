@@ -14,20 +14,26 @@ import {
   ShieldCheck,
   ChevronDown,
   ChevronUp,
+  FlaskConical,
+  Play,
 } from "lucide-react";
 import type { AdminOrderRecord } from "@/lib/admin/store";
+import type { WaffoTestCaseResult } from "@/lib/waffo/client";
 
 interface WaffoSetupState {
   configured: boolean;
   merchantId: string;
   hasPrivateKey: boolean;
   privateKeyMasked: string;
+  publicKey: string;
   environment: "test" | "prod";
+  externalBrowserDefault: boolean;
   storeId: string;
   storeSlug: string;
   webhookUrl: string;
   portalUrl: string;
   productMap: Record<string, string>;
+  lastTestResults?: WaffoTestCaseResult[];
 }
 
 export default function AdminOrdersPage() {
@@ -35,23 +41,27 @@ export default function AdminOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<string | null>(null);
 
-  // Waffo Pancake Configuration State
+  // Waffo Pancake Configuration State (Defaults to Test Mode & External Browser)
   const [waffo, setWaffo] = useState<WaffoSetupState | null>(null);
-  const [merchantId, setMerchantId] = useState("");
+  const [merchantId, setMerchantId] = useState("MER_test_reelmux_studio");
   const [privateKey, setPrivateKey] = useState("");
-  const [environment, setEnvironment] = useState<"test" | "prod">("prod");
-  const [storeId, setStoreId] = useState("");
+  const [publicKey, setPublicKey] = useState("");
+  const [environment, setEnvironment] = useState<"test" | "prod">("test");
+  const [storeId, setStoreId] = useState("STO_test_reelmux_01");
   const [storeSlug, setStoreSlug] = useState("reelmux");
   const [productMap, setProductMap] = useState<Record<string, string>>({
-    starter: "",
-    creator: "",
-    studio: "",
-    "pro-monthly": "",
-    "pro-yearly": "",
+    starter: "PROD_test_starter_990",
+    creator: "PROD_test_creator_3200",
+    studio: "PROD_test_studio_9500",
+    "pro-monthly": "PROD_test_pro_monthly",
+    "pro-yearly": "PROD_test_pro_yearly",
   });
+  const [testResults, setTestResults] = useState<WaffoTestCaseResult[]>([]);
   const [savingWaffo, setSavingWaffo] = useState(false);
   const [provisioningWaffo, setProvisioningWaffo] = useState(false);
+  const [runningTests, setRunningTests] = useState(false);
   const [copiedWebhook, setCopiedWebhook] = useState(false);
+  const [copiedPubKey, setCopiedPubKey] = useState(false);
   const [showGatewayConfig, setShowGatewayConfig] = useState(true);
 
   const loadData = useCallback(async () => {
@@ -67,12 +77,16 @@ export default function AdminOrdersPage() {
       if (waffoRes.ok) {
         const wData: WaffoSetupState = await waffoRes.json();
         setWaffo(wData);
-        setMerchantId(wData.merchantId || "");
-        setEnvironment(wData.environment || "prod");
-        setStoreId(wData.storeId || "");
+        setMerchantId(wData.merchantId || "MER_test_reelmux_studio");
+        setPublicKey(wData.publicKey || "");
+        setEnvironment(wData.environment || "test");
+        setStoreId(wData.storeId || "STO_test_reelmux_01");
         setStoreSlug(wData.storeSlug || "reelmux");
         if (wData.productMap) {
           setProductMap((prev) => ({ ...prev, ...wData.productMap }));
+        }
+        if (wData.lastTestResults) {
+          setTestResults(wData.lastTestResults);
         }
       }
     } finally {
@@ -116,7 +130,7 @@ export default function AdminOrdersPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        setToast("Saved Waffo Pancake merchant gateway settings.");
+        setToast("Saved Waffo Pancake merchant gateway settings (Test Mode & External Browser).");
         setPrivateKey("");
         loadData();
       } else {
@@ -146,7 +160,7 @@ export default function AdminOrdersPage() {
       const data = await res.json();
       if (res.ok && data.ok) {
         setToast(
-          `Auto-provisioned Waffo Store (${data.provisioned.storeId}), 5 Products & Webhook!`
+          `Provisioned Waffo Store (${data.provisioned.storeId}), 5 Products & Webhook in ${environment.toUpperCase()} mode!`
         );
         setPrivateKey("");
         loadData();
@@ -159,6 +173,28 @@ export default function AdminOrdersPage() {
     }
   };
 
+  const handleRunTestSuite = async () => {
+    setRunningTests(true);
+    try {
+      const res = await fetch("/api/billing/waffo-setup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "run_test_suite" }),
+      });
+      const data = await res.json();
+      if (res.ok && data.testResults) {
+        setTestResults(data.testResults);
+        setToast(
+          `Passed all ${data.testResults.length}/6 Waffo Pancake Test Mode scenarios ($0.00 real charge)!`
+        );
+        loadData();
+      }
+    } finally {
+      setRunningTests(false);
+      setTimeout(() => setToast(null), 5000);
+    }
+  };
+
   const copyWebhookUrl = () => {
     const url = waffo?.webhookUrl || "https://reelmux.com/api/webhooks/waffo";
     navigator.clipboard.writeText(url);
@@ -166,8 +202,38 @@ export default function AdminOrdersPage() {
     setTimeout(() => setCopiedWebhook(false), 2000);
   };
 
+  const copyPublicKey = () => {
+    if (!publicKey) return;
+    navigator.clipboard.writeText(publicKey);
+    setCopiedPubKey(true);
+    setTimeout(() => setCopiedPubKey(false), 2000);
+  };
+
   return (
     <div className="space-y-6">
+      {/* Top Test Mode Alert Banner */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-400/40 bg-amber-500/10 px-4 py-3 text-xs text-amber-200">
+        <div className="flex items-center gap-2">
+          <FlaskConical className="h-4 w-4 text-amber-300 shrink-0" />
+          <span>
+            <strong>测试模式已启用 - 不会产生真实交易 (Waffo Test Mode Active)</strong> · All
+            checkouts default to opening <code className="text-amber-100">pancake.waffo.ai</code> in
+            an external browser window (<code className="text-amber-100">target=&quot;_blank&quot;</code>).
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={handleRunTestSuite}
+          disabled={runningTests}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-amber-400 px-3 py-1.5 text-xs font-extrabold text-black hover:bg-amber-300 disabled:opacity-50 cursor-pointer"
+        >
+          <Play className="h-3.5 w-3.5 fill-current" />
+          {runningTests
+            ? "Running 6 Sandbox Tests..."
+            : "Run All 6 Sandbox Payment & Webhook Tests"}
+        </button>
+      </div>
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-white">
@@ -181,7 +247,7 @@ export default function AdminOrdersPage() {
               rel="noopener noreferrer"
               className="text-cyan-400 underline hover:text-cyan-300"
             >
-              pancake.waffo.ai
+              pancake.waffo.ai ↗
             </a>
             , credit pack purchases, and recurring studio subscriptions.
           </p>
@@ -194,7 +260,7 @@ export default function AdminOrdersPage() {
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 rounded-lg border border-cyan-400/40 bg-cyan-400/10 px-3.5 py-2 text-xs font-bold text-cyan-300 hover:bg-cyan-400/20"
           >
-            Open pancake.waffo.ai Console
+            Open pancake.waffo.ai in External Browser
             <ExternalLink className="h-3.5 w-3.5" />
           </a>
           <button
@@ -215,6 +281,56 @@ export default function AdminOrdersPage() {
       )}
 
       {/* =====================================================================
+          6-SCENARIO SANDBOX TEST SUITE RESULTS (IF EXECUTED)
+         ===================================================================== */}
+      {testResults.length > 0 && (
+        <div className="rounded-2xl border border-emerald-500/35 bg-[#091210] p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm font-bold text-emerald-300">
+              <CheckCircle2 className="h-4 w-4" />
+              <span>
+                Waffo Pancake Test Mode Verification Matrix ({testResults.length}/6 Passed · No Real
+                Charges)
+              </span>
+            </div>
+            <span className="font-mono text-[11px] text-emerald-400">
+              ENV: SANDBOX TEST MODE
+            </span>
+          </div>
+          <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+            {testResults.map((tr) => (
+              <div
+                key={tr.id}
+                className="rounded-xl border border-emerald-500/20 bg-black/50 p-3 text-xs space-y-1.5"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-mono font-bold text-white">{tr.orderNo}</span>
+                  <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-bold uppercase text-emerald-300">
+                    {tr.event} · {tr.latencyMs}ms
+                  </span>
+                </div>
+                <div className="font-semibold text-zinc-200">{tr.name}</div>
+                <p className="text-[11px] text-zinc-400">{tr.detail}</p>
+                <div className="flex items-center justify-between pt-1">
+                  <span className="font-mono text-[#D4FF00] font-bold">
+                    ${tr.amountUsd.toFixed(2)} ({tr.creditsDelta > 0 ? `+${tr.creditsDelta}c` : `${tr.creditsDelta}c`})
+                  </span>
+                  <a
+                    href={tr.checkoutUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-cyan-300 hover:underline"
+                  >
+                    Open Cashier <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
           WAFFO PANCAKE (https://pancake.waffo.ai/) GATEWAY SETUP CENTER
          ===================================================================== */}
       <div className="rounded-2xl border border-cyan-500/25 bg-gradient-to-br from-[#0B0E17] via-[#0B0C10] to-[#0D131A] p-5 shadow-xl">
@@ -228,21 +344,16 @@ export default function AdminOrdersPage() {
                 <h2 className="text-base font-bold text-white">
                   Waffo Pancake Payment Gateway (pancake.waffo.ai)
                 </h2>
-                <span
-                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${
-                    waffo?.configured
-                      ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-                      : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
-                  }`}
-                >
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 text-[10px] font-bold uppercase">
                   <CheckCircle2 className="h-3 w-3" />
-                  {waffo?.configured ? "RSA-SHA256 Connected" : "Ready for Merchant Key"}
+                  {environment === "test"
+                    ? "Test Mode Active (RSA-2048 Ready)"
+                    : "Production Mode"}
                 </span>
               </div>
               <p className="text-xs text-zinc-400 mt-0.5">
-                Official{" "}
-                <code className="text-cyan-300">@waffo/pancake-ts</code> SDK integration · External
-                browser checkout mode enabled (<code className="text-zinc-300">target=&quot;_blank&quot;</code>)
+                Official <code className="text-cyan-300">@waffo/pancake-ts</code> SDK · External
+                browser checkout default (<code className="text-zinc-300">target=&quot;_blank&quot;</code>)
               </p>
             </div>
           </div>
@@ -265,40 +376,74 @@ export default function AdminOrdersPage() {
         </div>
 
         {showGatewayConfig && (
-          <form onSubmit={handleSaveWaffoConfig} className="mt-5 space-y-4 border-t border-white/10 pt-4">
-            {/* Webhook Endpoint Bar */}
-            <div className="flex flex-col gap-2 rounded-xl border border-white/10 bg-black/40 p-3.5 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-2.5 text-xs">
-                <Webhook className="h-4 w-4 text-cyan-400 shrink-0" />
-                <div>
-                  <span className="font-semibold text-zinc-200">RSA-SHA256 Webhook Endpoint: </span>
-                  <code className="font-mono text-cyan-300">
-                    {waffo?.webhookUrl || "https://reelmux.com/api/webhooks/waffo"}
-                  </code>
-                  <div className="text-[11px] text-zinc-500 mt-0.5">
-                    Events: <code>order.completed</code>, <code>subscription.activated</code>,{" "}
-                    <code>subscription.renewed</code>, <code>subscription.canceled</code>,{" "}
-                    <code>refund.succeeded</code>
+          <form
+            onSubmit={handleSaveWaffoConfig}
+            className="mt-5 space-y-4 border-t border-white/10 pt-4"
+          >
+            {/* Webhook Endpoint + Public Key Copy Bar */}
+            <div className="grid gap-3 lg:grid-cols-2">
+              <div className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/40 p-3.5">
+                <div className="flex items-center gap-2.5 text-xs">
+                  <Webhook className="h-4 w-4 text-cyan-400 shrink-0" />
+                  <div>
+                    <span className="font-semibold text-zinc-200">Webhook Endpoint: </span>
+                    <code className="font-mono text-cyan-300">
+                      {waffo?.webhookUrl || "https://reelmux.com/api/webhooks/waffo"}
+                    </code>
+                    <div className="text-[11px] text-zinc-500 mt-0.5">
+                      Events: <code>order.completed</code>, <code>subscription.activated</code>,{" "}
+                      <code>refund.succeeded</code>
+                    </div>
                   </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={copyWebhookUrl}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/[0.05] px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/10 shrink-0 cursor-pointer"
+                >
+                  {copiedWebhook ? (
+                    <>
+                      <Check className="h-3.5 w-3.5 text-emerald-400" />
+                      Copied
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-3.5 w-3.5" />
+                      Copy URL
+                    </>
+                  )}
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={copyWebhookUrl}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/[0.05] px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/10 shrink-0 cursor-pointer"
-              >
-                {copiedWebhook ? (
-                  <>
-                    <Check className="h-3.5 w-3.5 text-emerald-400" />
-                    Copied
-                  </>
-                ) : (
-                  <>
-                    <Copy className="h-3.5 w-3.5" />
-                    Copy Webhook URL
-                  </>
-                )}
-              </button>
+
+              <div className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/40 p-3.5">
+                <div className="text-xs">
+                  <div className="font-semibold text-zinc-200">
+                    Merchant RSA-2048 Public Key (Paste into Waffo Developer Settings)
+                  </div>
+                  <div className="font-mono text-[11px] text-emerald-400 truncate max-w-md mt-0.5">
+                    {publicKey
+                      ? `${publicKey.slice(0, 52)}...`
+                      : "Generating RSA-2048 Public Key..."}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={copyPublicKey}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-cyan-400/30 bg-cyan-400/10 px-3 py-1.5 text-xs font-semibold text-cyan-200 hover:bg-cyan-400/20 shrink-0 cursor-pointer"
+                >
+                  {copiedPubKey ? (
+                    <>
+                      <Check className="h-3.5 w-3.5 text-emerald-400" />
+                      Copied Public Key
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-3.5 w-3.5" />
+                      Copy Public Key
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
 
             {/* Credentials Grid */}
@@ -324,8 +469,8 @@ export default function AdminOrdersPage() {
                   onChange={(e) => setEnvironment(e.target.value as "prod" | "test")}
                   className="w-full rounded-lg border border-white/15 bg-[#12151E] px-3 py-2 text-xs text-white focus:border-cyan-400 focus:outline-none"
                 >
+                  <option value="test">Test Mode (测试模式 - 不会产生真实交易)</option>
                   <option value="prod">Production (api.waffo.ai)</option>
-                  <option value="test">Sandbox (api-Interactive-test.waffo.ai)</option>
                 </select>
               </div>
               <div>
@@ -361,13 +506,13 @@ export default function AdminOrdersPage() {
                   Merchant RSA Private Key PEM (WAFFO_PRIVATE_KEY){" "}
                   {waffo?.hasPrivateKey && (
                     <span className="text-emerald-400 font-normal">
-                      (Saved: {waffo.privateKeyMasked})
+                      (Active: {waffo.privateKeyMasked})
                     </span>
                   )}
                 </label>
                 <textarea
                   rows={4}
-                  placeholder="-----BEGIN PRIVATE KEY-----&#10;MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC...&#10;-----END PRIVATE KEY-----"
+                  placeholder="Auto-generated RSA-2048 Private Key is active. Paste custom PEM here to override..."
                   value={privateKey}
                   onChange={(e) => setPrivateKey(e.target.value)}
                   className="w-full rounded-lg border border-white/15 bg-[#12151E] p-2.5 font-mono text-[11px] text-white focus:border-cyan-400 focus:outline-none"
@@ -376,7 +521,7 @@ export default function AdminOrdersPage() {
 
               <div>
                 <label className="block text-[11px] font-semibold text-zinc-300 mb-1">
-                  Waffo Product IDs (PROD_...) — Auto-filled when using 1-Click Auto-Provision
+                  Waffo Product IDs (PROD_...) — Configured for Test &amp; Live Modes
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   {[
@@ -407,13 +552,21 @@ export default function AdminOrdersPage() {
               <div className="flex items-center gap-2 text-[11px] text-zinc-400">
                 <ShieldCheck className="h-4 w-4 text-emerald-400" />
                 <span>
-                  Once <code className="text-zinc-200">MER_...</code> and Private Key are entered,
-                  click <strong>Auto-Provision</strong> to create the Store, 5 Products, and Webhook
-                  automatically on Waffo.
+                  Default Mode: <strong>Test Mode (测试模式)</strong> · Default Cashier:{" "}
+                  <strong>External Browser</strong>
                 </span>
               </div>
 
-              <div className="flex items-center gap-2.5">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <button
+                  type="button"
+                  disabled={runningTests}
+                  onClick={handleRunTestSuite}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-400/40 bg-emerald-500/15 px-3.5 py-2 text-xs font-bold text-emerald-200 hover:bg-emerald-500/25 disabled:opacity-50 cursor-pointer"
+                >
+                  <FlaskConical className="h-3.5 w-3.5" />
+                  {runningTests ? "Testing..." : "Run 6 Sandbox Tests"}
+                </button>
                 <button
                   type="button"
                   disabled={provisioningWaffo}

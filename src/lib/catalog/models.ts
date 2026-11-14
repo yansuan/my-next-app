@@ -84,59 +84,59 @@ export interface ImageExampleItem {
 // ============================================================================
 export const HERO_BG_VIDEOS = [
   {
-    id: "hero-ballet",
-    title: "Rehearsal in Grand Theatre",
-    modelId: "hailuo-2.3",
-    modelName: "Hailuo 2.3",
-    credits: 79,
-    videoUrl: "/examples/hailuo-2-3-ballet.mp4",
-    posterUrl: "/examples/hailuo-2-3-ballet.webp",
-    prompt:
-      "A ballerina adjusting her pointe shoes on a dimly lit theatre stage, warm tungsten spotlight cutting through stage dust, 35mm cinema lens.",
-  },
-  {
-    id: "hero-train",
-    title: "Last Train Home",
+    id: "hero-cyber-pagoda",
+    title: "Holographic Lotus Sanctuary",
     modelId: "seedance-2.5",
     modelName: "Seedance 2.5",
     credits: 135,
     videoUrl: "/examples/seedance-2-5-train.mp4",
     posterUrl: "/examples/seedance-2-5-train.webp",
     prompt:
-      "Cinematic close-up of a young woman looking out the window of a moving commuter train at dusk, city lights streaking across the glass, melancholic film grain.",
+      "Anamorphic aerial drone orbit around a floating glass cyber-pagoda above a bioluminescent lotus lake at midnight, volumetric cyan mist, 24fps cinema grain.",
   },
   {
-    id: "hero-cat",
-    title: "Window Cat in Snowfall",
-    modelId: "kling-2.6",
-    modelName: "Kling 2.6",
-    credits: 65,
-    videoUrl: "/examples/kling-2-6-cat.mp4",
-    posterUrl: "/examples/kling-2-6-cat.webp",
-    prompt:
-      "An orange tabby cat sitting on a cozy wooden windowsill watching heavy snowflakes fall outside in slow motion, soft natural winter daylight.",
-  },
-  {
-    id: "hero-chase",
-    title: "Desert Dune Pursuit",
+    id: "hero-valkyrie-aero",
+    title: "Valkyrie Wind-Tunnel Telemetry",
     modelId: "kling-4.0",
     modelName: "Kling 4.0",
     credits: 226,
     videoUrl: "/examples/kling-4-chase.mp4",
     posterUrl: "/examples/kling-4-chase.webp",
     prompt:
-      "Low-angle tracking shot of an off-road buggy kicking up golden sand plumes across towering desert dunes at sunset, anamorphic lens flare.",
+      "Low-angle tracking shot of a matte-silver aerodynamic hypercar inside a carbon-fiber wind tunnel as luminous cyan airflow streamlines sweep over the chassis.",
   },
   {
-    id: "hero-forest",
-    title: "Misty Forest Stream",
+    id: "hero-orbital-ring",
+    title: "Lagrange Orbital Shipyard",
+    modelId: "hailuo-2.3",
+    modelName: "Hailuo 2.3",
+    credits: 79,
+    videoUrl: "/examples/hailuo-2-3-ballet.mp4",
+    posterUrl: "/examples/hailuo-2-3-ballet.webp",
+    prompt:
+      "Zero-gravity cinema pan across a sunlit orbital spacecraft ring station above Earth's glowing turquoise atmospheric horizon, IMAX 70mm clarity.",
+  },
+  {
+    id: "hero-basalt-aurora",
+    title: "Obsidian Magma & Aurora",
     modelId: "wan-3.0",
     modelName: "Wan 3.0",
     credits: 58,
     videoUrl: "/examples/wan-3-forest.mp4",
     posterUrl: "/examples/wan-3-forest.webp",
     prompt:
-      "Sunlight beams piercing through ancient moss-covered redwoods over a crystal-clear mountain stream, floating mist and realistic water ripples.",
+      "Wide cinema crane shot over black hexagonal basalt cliffs in Iceland as glowing magma veins meet emerald aurora borealis reflections on wet volcanic sand.",
+  },
+  {
+    id: "hero-acoustic-prism",
+    title: "Acoustic Ferrofluid Symphony",
+    modelId: "kling-2.6",
+    modelName: "Kling 2.6",
+    credits: 65,
+    videoUrl: "/examples/kling-2-6-cat.mp4",
+    posterUrl: "/examples/kling-2-6-cat.webp",
+    prompt:
+      "1000fps Phantom macro shot of iridescent ferrofluid sculptures levitating and rippling in mid-air to a deep sub-bass frequency under studio rim light.",
   },
 ];
 
@@ -987,7 +987,7 @@ export function getModelsForTool(toolSlug: string, category: MediaCategory): AIM
 export const VIDEO_EXAMPLES_GALLERY: VideoExampleItem[] = [
   {
     id: "vex-1",
-    title: "Night market lanterns",
+    title: "Cyber-Pagoda Rain Orbit",
     modelId: "seedance-2.0",
     modelName: "Seedance 2.0",
     credits: 93,
@@ -996,12 +996,12 @@ export const VIDEO_EXAMPLES_GALLERY: VideoExampleItem[] = [
     videoUrl: "/examples/seedance-2-night-market.mp4",
     posterUrl: "/examples/seedance-2-night-market.webp",
     prompt:
-      "Warm glowing red paper lanterns swaying above a bustling Taipei night market alley, steam rising from street food stalls, shallow depth of field.",
+      "Holographic cyan lanterns floating around a glass cyber-pavilion during a midnight rainstorm, neon reflections rippling across wet obsidian tiles.",
     toolSlugs: ["text-to-video", "reference-to-video"],
   },
   {
     id: "vex-2",
-    title: "Last train home",
+    title: "Holographic Lotus Sanctuary",
     modelId: "seedance-2.5",
     modelName: "Seedance 2.5",
     credits: 135,
@@ -1010,12 +1010,12 @@ export const VIDEO_EXAMPLES_GALLERY: VideoExampleItem[] = [
     videoUrl: "/examples/seedance-2-5-train.mp4",
     posterUrl: "/examples/seedance-2-5-train.webp",
     prompt:
-      "Cinematic close-up of a passenger looking out a commuter train window at twilight as neon city lights streak across the glass, synchronized ambient rail clatter.",
+      "Anamorphic aerial drone orbit around a floating glass cyber-pagoda above a bioluminescent lotus lake at midnight, synchronized ambient synth chimes.",
     toolSlugs: ["text-to-video", "image-to-video", "frames-to-video"],
   },
   {
     id: "vex-3",
-    title: "Desert chase",
+    title: "Valkyrie Wind-Tunnel Telemetry",
     modelId: "kling-4.0",
     modelName: "Kling 4.0",
     credits: 226,
@@ -1024,12 +1024,12 @@ export const VIDEO_EXAMPLES_GALLERY: VideoExampleItem[] = [
     videoUrl: "/examples/kling-4-chase.mp4",
     posterUrl: "/examples/kling-4-chase.webp",
     prompt:
-      "Low-angle high-speed tracking shot of an off-road buggy racing across golden desert dunes, kicking up volumetric sand plumes in sunset light.",
+      "Low-angle tracking shot of a matte-silver aerodynamic hypercar inside a dark wind tunnel as glowing cyan airflow streamlines sweep over the carbon chassis.",
     toolSlugs: ["text-to-video", "image-to-video", "frames-to-video", "motion-control"],
   },
   {
     id: "vex-4",
-    title: "Rehearsal",
+    title: "Lagrange Orbital Shipyard",
     modelId: "hailuo-2.3",
     modelName: "Hailuo 2.3",
     credits: 79,
@@ -1038,12 +1038,12 @@ export const VIDEO_EXAMPLES_GALLERY: VideoExampleItem[] = [
     videoUrl: "/examples/hailuo-2-3-ballet.mp4",
     posterUrl: "/examples/hailuo-2-3-ballet.webp",
     prompt:
-      "A ballerina on a wooden stage floor bathed in a single warm overhead spotlight, delicate tulle skirt movement, expressive posture.",
+      "Zero-gravity cinema pan across a sunlit orbital spacecraft ring above Earth's glowing turquoise terminator line, solar arrays unfolding.",
     toolSlugs: ["text-to-video", "image-to-video"],
   },
   {
     id: "vex-5",
-    title: "Forest stream",
+    title: "Obsidian Magma & Aurora",
     modelId: "wan-3.0",
     modelName: "Wan 3.0",
     credits: 58,
@@ -1052,12 +1052,12 @@ export const VIDEO_EXAMPLES_GALLERY: VideoExampleItem[] = [
     videoUrl: "/examples/wan-3-forest.mp4",
     posterUrl: "/examples/wan-3-forest.webp",
     prompt:
-      "Golden morning sunbeams filtering through misty redwood trees onto a mossy forest creek, crystal water flowing over smooth river stones.",
+      "Wide crane shot over black hexagonal basalt cliffs in Iceland as glowing magma veins meet emerald aurora borealis reflections.",
     toolSlugs: ["text-to-video", "image-to-video", "frames-to-video", "reference-to-video"],
   },
   {
     id: "vex-6",
-    title: "Jazz club",
+    title: "Modular Synth Laser Stage",
     modelId: "minimax-h3",
     modelName: "MiniMax H3",
     credits: 33,
@@ -1066,12 +1066,12 @@ export const VIDEO_EXAMPLES_GALLERY: VideoExampleItem[] = [
     videoUrl: "/examples/minimax-h3-concert.mp4",
     posterUrl: "/examples/minimax-h3-concert.webp",
     prompt:
-      "Intimate smoky jazz club stage with brass saxophone soloist under amber stage lights, bokeh crowd silhouette, synchronized live club ambience.",
+      "Electronic musician performing on a bespoke analog modular synthesizer surrounded by volumetric emerald laser beams and atmospheric club haze.",
     toolSlugs: ["text-to-video", "image-to-video", "frames-to-video"],
   },
   {
     id: "vex-7",
-    title: "Bamboo duel",
+    title: "Valkyrie Mech Hangar",
     modelId: "kling-3.0",
     modelName: "Kling 3.0",
     credits: 118,
@@ -1080,12 +1080,12 @@ export const VIDEO_EXAMPLES_GALLERY: VideoExampleItem[] = [
     videoUrl: "/examples/kling-3-samurai.mp4",
     posterUrl: "/examples/kling-3-samurai.webp",
     prompt:
-      "Two ronin warriors circling each other in a wind-swept emerald bamboo forest, falling leaves in slow motion, sweeping crane camera.",
+      "Robotic gantry arms welding titanium armor plates onto an orbital exosuit inside a subterranean hangar, sparks cascading in slow motion.",
     toolSlugs: ["text-to-video", "frames-to-video", "motion-control"],
   },
   {
     id: "vex-8",
-    title: "Window cat",
+    title: "Acoustic Ferrofluid Symphony",
     modelId: "kling-2.6",
     modelName: "Kling 2.6",
     credits: 65,
@@ -1094,12 +1094,12 @@ export const VIDEO_EXAMPLES_GALLERY: VideoExampleItem[] = [
     videoUrl: "/examples/kling-2-6-cat.mp4",
     posterUrl: "/examples/kling-2-6-cat.webp",
     prompt:
-      "Fluffy ginger cat perched by a frosted window watching thick snowflakes drift outside, warm indoor tungsten glow.",
+      "1000fps Phantom macro shot of iridescent ferrofluid sculptures levitating and rippling in mid-air under studio strobe illumination.",
     toolSlugs: ["text-to-video", "image-to-video"],
   },
   {
     id: "vex-9",
-    title: "Wok fire",
+    title: "Molecular Gastronomy Nitrogen",
     modelId: "seedance-2.0",
     modelName: "Seedance 2.0",
     credits: 93,
@@ -1108,12 +1108,12 @@ export const VIDEO_EXAMPLES_GALLERY: VideoExampleItem[] = [
     videoUrl: "/examples/seedance-2-chef.mp4",
     posterUrl: "/examples/seedance-2-chef.webp",
     prompt:
-      "Slow-motion close-up of a master chef tossing ingredients in a blazing carbon-steel wok, tongues of orange flame illuminating stainless steel kitchen.",
+      "High-speed macro shot of liquid nitrogen vapor cascading over a crystalline sugar sphere on black slate in an avant-garde Michelin kitchen.",
     toolSlugs: ["text-to-video", "image-to-video"],
   },
   {
     id: "vex-10",
-    title: "Snow fox",
+    title: "Bioluminescent Glacial Cavern",
     modelId: "kling-4.0",
     modelName: "Kling 4.0",
     credits: 226,
@@ -1122,12 +1122,12 @@ export const VIDEO_EXAMPLES_GALLERY: VideoExampleItem[] = [
     videoUrl: "/examples/kling-4-fox.mp4",
     posterUrl: "/examples/kling-4-fox.webp",
     prompt:
-      "Arctic fox trotting through powdery snowdrifts at blue hour, fine fur detail blowing in the breeze, National Geographic telephoto lens.",
+      " Gliding steadicam through a translucent blue ice cave in Vatnajökull illuminated by glowing sub-surface bioluminescent micro-organisms.",
     toolSlugs: ["text-to-video", "image-to-video", "reference-to-video"],
   },
   {
     id: "vex-11",
-    title: "Humpback breach",
+    title: "Abyssal Manta Ray Fleet",
     modelId: "hailuo-2.3",
     modelName: "Hailuo 2.3",
     credits: 79,
@@ -1136,12 +1136,12 @@ export const VIDEO_EXAMPLES_GALLERY: VideoExampleItem[] = [
     videoUrl: "/examples/hailuo-2-3-whale.mp4",
     posterUrl: "/examples/hailuo-2-3-whale.webp",
     prompt:
-      "Massive humpback whale breaching out of deep indigo ocean swells, millions of water droplets suspended in golden sunset light.",
+      "A squadron of giant oceanic manta rays gliding gracefully through sun-dappled cobalt ocean currents, volumetric caustic light rays.",
     toolSlugs: ["text-to-video", "image-to-video"],
   },
   {
     id: "vex-12",
-    title: "Garden robot",
+    title: "Android Watchmaker Atelier",
     modelId: "wan-3.0",
     modelName: "Wan 3.0",
     credits: 58,
@@ -1150,12 +1150,12 @@ export const VIDEO_EXAMPLES_GALLERY: VideoExampleItem[] = [
     videoUrl: "/examples/wan-3-robot.mp4",
     posterUrl: "/examples/wan-3-robot.webp",
     prompt:
-      "Friendly weathered ceramic robot watering bonsai trees in a sunlit greenhouse conservatory, macro lens with soft bokeh.",
+      "Porcelain-and-brass precision automaton assembling a tourbillon mechanical watch movement under a jeweler's loupe, shallow macro depth of field.",
     toolSlugs: ["text-to-video", "reference-to-video", "frames-to-video"],
   },
   {
     id: "vex-13",
-    title: "Moon walk",
+    title: "Titan Methane Sea Horizon",
     modelId: "grok-imagine-video-1.5",
     modelName: "Grok Imagine Video 1.5",
     credits: 34,
@@ -1164,12 +1164,12 @@ export const VIDEO_EXAMPLES_GALLERY: VideoExampleItem[] = [
     videoUrl: "/examples/grok-video-astronaut.mp4",
     posterUrl: "/examples/grok-video-astronaut.webp",
     prompt:
-      "Astronaut bounding across lunar regolith in low gravity with Earth rising over the horizon, crisp visor reflections.",
+      "Deep-space explorer standing on the shoreline of Titan's liquid methane sea as Saturn's golden rings arch across the amber sky.",
     toolSlugs: ["text-to-video", "frames-to-video"],
   },
   {
     id: "vex-14",
-    title: "Morning surf",
+    title: "Hydrofoil Racing Yacht",
     modelId: "seedance-2.5",
     modelName: "Seedance 2.5",
     credits: 135,
@@ -1178,12 +1178,12 @@ export const VIDEO_EXAMPLES_GALLERY: VideoExampleItem[] = [
     videoUrl: "/examples/seedance-2-5-surf.mp4",
     posterUrl: "/examples/seedance-2-5-surf.webp",
     prompt:
-      "Water-level housing shot inside a translucent turquoise barrel wave at sunrise as a surfer carves along the wall.",
+      "Low-level chase helicopter shot of a carbon-fiber America's Cup hydrofoil yacht skimming above turquoise water at 50 knots, rooster-tail spray.",
     toolSlugs: ["text-to-video", "frames-to-video", "motion-control"],
   },
   {
     id: "vex-15",
-    title: "Neon crossing",
+    title: "Cyber-Grid Skybridge",
     modelId: "kling-3.0",
     modelName: "Kling 3.0",
     credits: 118,
@@ -1192,12 +1192,12 @@ export const VIDEO_EXAMPLES_GALLERY: VideoExampleItem[] = [
     videoUrl: "/examples/kling-3-city.mp4",
     posterUrl: "/examples/kling-3-city.webp",
     prompt:
-      "Aerial drone tilt-down over Shibuya crossing in neon rain, hundreds of translucent umbrellas reflecting cybernetic billboards.",
+      "FPV drone dive between glass skybridges connecting supertall megastructures at twilight, autonomous air-taxis banking through light trails.",
     toolSlugs: ["text-to-video", "motion-control"],
   },
   {
     id: "vex-16",
-    title: "Lighthouse storm",
+    title: "North Sea Offshore Vortex",
     modelId: "minimax-h3",
     modelName: "MiniMax H3",
     credits: 33,
@@ -1206,7 +1206,7 @@ export const VIDEO_EXAMPLES_GALLERY: VideoExampleItem[] = [
     videoUrl: "/examples/minimax-h3-storm.mp4",
     posterUrl: "/examples/minimax-h3-storm.webp",
     prompt:
-      "Towering Atlantic storm waves crashing against a granite lighthouse at dusk, rotating beacon beam cutting through sea spray.",
+      "Dramatic aerial orbit around an illuminated offshore wind turbine standing firm against towering emerald North Sea storm swells at dusk.",
     toolSlugs: ["text-to-video", "image-to-video"],
   },
 ];
@@ -1214,91 +1214,91 @@ export const VIDEO_EXAMPLES_GALLERY: VideoExampleItem[] = [
 export const IMAGE_EXAMPLES_GALLERY: ImageExampleItem[] = [
   {
     id: "iex-1",
-    title: "Exhibition Poster Typography",
+    title: "Iridescent Prism Sculpture",
     modelId: "gpt-image-2.6",
     modelName: "GPT Image 2.6",
     credits: 3,
     resolution: "2K",
     imageUrl: "/examples/gpt-image-2-6-poster.webp",
     prompt:
-      "Swiss modernist exhibition poster with razor-sharp grid typography, tactile risograph paper grain, bold signal lime and charcoal palette.",
+      "Abstract 3D dichroic glass sculpture refracting cyan and signal-lime laser beams on a matte obsidian pedestal, octane render studio key art.",
   },
   {
     id: "iex-2",
-    title: "Chronograph Macro Sunburst",
+    title: "Haute-Couture Botanical Flacon",
     modelId: "gpt-image-2.6-sunburst",
     modelName: "GPT Image 2.6 Sunburst",
     credits: 3,
     resolution: "2K",
     imageUrl: "/examples/gpt-image-2-6-sunburst-watch.webp",
     prompt:
-      "Commercial macro product photograph of a brushed titanium chronograph watch on wet black slate, dramatic golden rim lighting.",
+      "Luxury perfume campaign still life with sculpted crystal flacon surrounded by dew-kissed black orchids and golden caustic light rays.",
   },
   {
     id: "iex-3",
-    title: "Artisanal Ramen Editorial",
+    title: "Neon Izakaya Cyber-Alley",
     modelId: "minimax-h3-image",
     modelName: "MiniMax H3 Image",
     credits: 4,
     resolution: "2K",
     imageUrl: "/examples/gpt-image-2-6-sunburst-ramen.webp",
     prompt:
-      "Overhead editorial food photography of steaming tonkotsu ramen in a handcrafted ceramic bowl, glossy broth, soft window light.",
+      "Atmospheric architectural photography of a futuristic glass culinary pavilion glowing in twilight rain, warm tungsten interior contrasting with cyan neon.",
   },
   {
     id: "iex-4",
-    title: "Bistro Tasting Menu",
+    title: "Nordic Fire-Roasted Platter",
     modelId: "nano-banana-pro",
     modelName: "Nano Banana Pro",
     credits: 7,
     resolution: "2K",
     imageUrl: "/examples/nano-banana-pro-food.webp",
     prompt:
-      "Fine-dining plating of seared scallops with microgreens on dark stoneware, natural Michelin-star restaurant lighting.",
+      "Editorial culinary photograph of cedar-smoked wild salmon and charred botanicals on hand-thrown basalt ceramic tableware, moody daylight.",
   },
   {
     id: "iex-5",
-    title: "2D Game Sprite Sheet",
+    title: "Holographic Neural Core",
     modelId: "recraft-v3",
     modelName: "Recraft V3",
     credits: 13,
     resolution: "2K",
     imageUrl: "/examples/gpt-image-2-6-sprite.webp",
     prompt:
-      "Clean isometric character sprite sheet with consistent proportions, idle and run poses, transparent background.",
+      "Isometric technical illustration of a quantum photonic processor core with glowing fiber-optic conduits and translucent sapphire housing.",
   },
   {
     id: "iex-6",
-    title: "Concept Sneaker Studio",
+    title: "Aero-Weave Carbon Runner",
     modelId: "flux-2-max",
     modelName: "FLUX.2 Max",
     credits: 20,
     resolution: "2K",
     imageUrl: "/examples/gpt-image-2-5-sneaker.webp",
     prompt:
-      "Futuristic knit runner sneaker suspended in mid-air with translucent sole, studio strobe lighting, ultra-detailed weave texture.",
+      "Commercial studio hero shot of a 3D-printed lattice running shoe suspended in zero gravity with dramatic cyan and lime rim lighting.",
   },
   {
     id: "iex-7",
-    title: "Editorial Studio Portrait",
+    title: "Anamorphic Cinema Portrait",
     modelId: "seedream-5.0-pro",
     modelName: "Seedream 5.0 Pro",
     credits: 11,
     resolution: "4K",
     imageUrl: "/examples/nano-banana-2-portrait.webp",
     prompt:
-      "Medium-format Hasselblad portrait with natural skin pores, warm golden-hour rim light, shallow depth of field.",
+      "65mm medium-format studio portrait with dual-tone cyan and warm amber split lighting, ultra-fine skin texture, shallow depth of field.",
   },
   {
     id: "iex-8",
-    title: "Illustrated World Map",
+    title: "Orbital Cartography Atlas",
     modelId: "nano-banana-2.1",
     modelName: "Nano Banana 2.1",
     credits: 5,
     resolution: "2K",
     imageUrl: "/examples/nano-banana-pro-map.webp",
     prompt:
-      "Detailed isometric illustrated fantasy cartography map with legible landmark labels, compass rose, and parchment texture.",
+      "Detailed topographic globe visualization with glowing elevation contours, maritime shipping routes, and crisp telemetry typography.",
   },
 ];
 
@@ -1514,8 +1514,8 @@ export const HERO_LIVE_SAMPLES = [
     credits: 135,
     resolution: "1080p · 5s · Native Audio",
     prompt:
-      "Cinematic close-up of a passenger looking out a commuter train window at twilight as neon city lights streak across the glass, synchronized rail ambience.",
-    metrics: { speed: "29s avg", audio: "Stereo Rail + City Foley", consistency: "99.2%" },
+      "Anamorphic aerial drone orbit around a floating glass cyber-pagoda above a bioluminescent lotus lake at midnight, synchronized ambient synth chimes.",
+    metrics: { speed: "27s avg", audio: "Stereo Synth + Rain Ambience", consistency: "99.4%" },
     videoUrl: "/examples/seedance-2-5-train.mp4",
     posterUrl: "/examples/seedance-2-5-train.webp",
   },
@@ -1526,8 +1526,8 @@ export const HERO_LIVE_SAMPLES = [
     credits: 226,
     resolution: "2K · 10s · Keyframe Lock",
     prompt:
-      "Low-angle tracking shot of an off-road buggy kicking up golden sand plumes across towering desert dunes at sunset, 35mm anamorphic lens flare.",
-    metrics: { speed: "42s avg", audio: "Engine Roar + Desert Wind", consistency: "99.5%" },
+      "Low-angle tracking shot of a matte-silver aerodynamic hypercar inside a dark wind tunnel as glowing cyan airflow streamlines sweep over the carbon chassis.",
+    metrics: { speed: "38s avg", audio: "Turbine Whoosh + Sub-Bass", consistency: "99.6%" },
     videoUrl: "/examples/kling-4-chase.mp4",
     posterUrl: "/examples/kling-4-chase.webp",
   },
@@ -1538,8 +1538,8 @@ export const HERO_LIVE_SAMPLES = [
     credits: 79,
     resolution: "1080p · 6s · Director Camera",
     prompt:
-      "A ballerina on a wooden theatre stage bathed in a warm overhead spotlight, delicate tulle movement and natural expressive posture.",
-    metrics: { speed: "24s avg", audio: "Stage Ambience", consistency: "99.0%" },
+      "Zero-gravity cinema pan across a sunlit orbital spacecraft ring above Earth's glowing turquoise atmospheric horizon, IMAX 70mm look.",
+    metrics: { speed: "23s avg", audio: "Orbital Telemetry Hum", consistency: "99.1%" },
     videoUrl: "/examples/hailuo-2-3-ballet.mp4",
     posterUrl: "/examples/hailuo-2-3-ballet.webp",
   },
@@ -1550,8 +1550,8 @@ export const HERO_LIVE_SAMPLES = [
     credits: 33,
     resolution: "2K · 5s · Native Sound",
     prompt:
-      "Intimate smoky jazz club stage with brass saxophone soloist under amber stage lights, bokeh crowd silhouette, synchronized live jazz audio.",
-    metrics: { speed: "19s avg", audio: "Live Saxophone + Club", consistency: "98.8%" },
+      "Electronic musician performing on a bespoke analog modular synthesizer surrounded by volumetric emerald laser beams and atmospheric club haze.",
+    metrics: { speed: "18s avg", audio: "128 BPM Analog Modular Arp", consistency: "98.9%" },
     videoUrl: "/examples/minimax-h3-concert.mp4",
     posterUrl: "/examples/minimax-h3-concert.webp",
   },
@@ -1562,8 +1562,8 @@ export const HERO_LIVE_SAMPLES = [
     credits: 58,
     resolution: "1080p · 5s · Multi-Reference",
     prompt:
-      "Sunlight beams piercing through ancient moss-covered redwoods over a crystal-clear mountain stream, floating mist and realistic water ripples.",
-    metrics: { speed: "22s avg", audio: "Forest Creek + Birds", consistency: "99.1%" },
+      "Wide cinema crane shot over black hexagonal basalt cliffs in Iceland as glowing magma veins meet emerald aurora borealis reflections.",
+    metrics: { speed: "21s avg", audio: "Volcanic Rumble + Arctic Wind", consistency: "99.2%" },
     videoUrl: "/examples/wan-3-forest.mp4",
     posterUrl: "/examples/wan-3-forest.webp",
   },
@@ -1572,10 +1572,10 @@ export const HERO_LIVE_SAMPLES = [
     modelName: "GPT Image 2.6",
     badge: "NEW",
     credits: 3,
-    resolution: "2K · Poster Typography",
+    resolution: "2K · Keyframe Art",
     prompt:
-      "Swiss modernist exhibition poster with razor-sharp grid typography, tactile risograph paper grain, bold signal lime and charcoal palette.",
-    metrics: { speed: "4.2s avg", audio: "Still Image (2048×2048)", consistency: "100% Text" },
+      "Abstract 3D dichroic glass sculpture refracting cyan and signal-lime laser beams on a matte obsidian pedestal, octane render studio key art.",
+    metrics: { speed: "3.9s avg", audio: "Still Image (2048×2048)", consistency: "100% Text" },
     posterUrl: "/examples/gpt-image-2-6-poster.webp",
   },
 ];
@@ -1583,49 +1583,49 @@ export const HERO_LIVE_SAMPLES = [
 export const PROMPT_STARTERS = [
   {
     id: "starter-1",
-    title: "Last Train Home (Multi-Shot)",
+    title: "Holographic Lotus Sanctuary",
     toolSlug: "text-to-video",
     modelId: "seedance-2.5",
     credits: 135,
     settings: "5s · 1080p · 16:9 · Native Audio",
     prompt:
-      "Cinematic close-up of a passenger looking out a commuter train window at twilight as neon city lights streak across the glass, synchronized ambient rail clatter.",
+      "Anamorphic aerial drone orbit around a floating glass cyber-pagoda above a bioluminescent lotus lake at midnight, synchronized ambient synth chimes.",
     previewUrl: "/examples/seedance-2-5-train.webp",
     videoUrl: "/examples/seedance-2-5-train.mp4",
   },
   {
     id: "starter-2",
-    title: "Desert Dune Buggy Pursuit",
+    title: "Valkyrie Wind-Tunnel Telemetry",
     toolSlug: "text-to-video",
     modelId: "kling-4.0",
     credits: 226,
     settings: "5s · 1080p · 16:9 · Keyframe Lock",
     prompt:
-      "Low-angle high-speed tracking shot of an off-road buggy racing across golden desert dunes, kicking up volumetric sand plumes in sunset light.",
+      "Low-angle tracking shot of a matte-silver aerodynamic hypercar inside a dark wind tunnel as glowing cyan airflow streamlines sweep over the carbon chassis.",
     previewUrl: "/examples/kling-4-chase.webp",
     videoUrl: "/examples/kling-4-chase.mp4",
   },
   {
     id: "starter-3",
-    title: "Smoky Jazz Club Soloist",
+    title: "Modular Synth Laser Stage",
     toolSlug: "text-to-video",
     modelId: "minimax-h3",
     credits: 33,
     settings: "5s · 2K · 16:9 · Native Sound",
     prompt:
-      "Intimate smoky jazz club stage with brass saxophone soloist under amber stage lights, bokeh crowd silhouette, synchronized live club ambience.",
+      "Electronic musician performing on a bespoke analog modular synthesizer surrounded by volumetric emerald laser beams and atmospheric club haze.",
     previewUrl: "/examples/minimax-h3-concert.webp",
     videoUrl: "/examples/minimax-h3-concert.mp4",
   },
   {
     id: "starter-4",
-    title: "Redwood Forest Creek",
+    title: "Obsidian Magma & Aurora",
     toolSlug: "reference-to-video",
     modelId: "wan-3.0",
     credits: 58,
     settings: "5s · 1080p · 16:9 · Reference Lock",
     prompt:
-      "Golden morning sunbeams filtering through misty redwood trees onto a mossy forest creek, crystal water flowing over smooth river stones.",
+      "Wide cinema crane shot over black hexagonal basalt cliffs in Iceland as glowing magma veins meet emerald aurora borealis reflections.",
     previewUrl: "/examples/wan-3-forest.webp",
     videoUrl: "/examples/wan-3-forest.mp4",
   },
