@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   Loader2,
@@ -35,7 +35,16 @@ function AiEffectsContent() {
   const [status, setStatus] = useState<"idle" | "running" | "done" | "failed">("idle");
   const [message, setMessage] = useState("");
   const [outputUrl, setOutputUrl] = useState<string | null>(null);
-  const { reserveCredits, settleCredits, refundCredits, availableCredits } = useWallet();
+  const { reserveCredits, settleCredits, refundCredits, availableCredits, isSignedIn } =
+    useWallet();
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     const qEffect = searchParams.get("effect");
@@ -49,6 +58,11 @@ function AiEffectsContent() {
   const model = MODELS_CATALOG.find((m) => m.id === effect.modelId);
 
   const run = async () => {
+    if (!isSignedIn) {
+      setStatus("failed");
+      setMessage("Please sign in with Google to generate effects.");
+      return;
+    }
     if (
       !reserveCredits(
         effect.credits,
@@ -81,11 +95,15 @@ function AiEffectsContent() {
 
       for (let i = 0; i < 60; i++) {
         await new Promise((r) => setTimeout(r, 2000));
-        const p = await (
-          await fetch(
-            `/api/jobs/${encodeURIComponent(created.yirJobId)}?model=${effect.modelId}`
-          )
-        ).json();
+        if (!isMountedRef.current) return;
+        const pollRes = await fetch(
+          `/api/jobs/${encodeURIComponent(created.yirJobId)}?model=${encodeURIComponent(effect.modelId)}`
+        );
+        const p = await pollRes.json();
+        if (!isMountedRef.current) return;
+        if (!pollRes.ok) {
+          throw new Error(p?.error || `Polling failed (${pollRes.status})`);
+        }
         if (p.status === "succeeded") {
           settleCredits(
             effect.credits,
@@ -104,6 +122,7 @@ function AiEffectsContent() {
       }
       throw new Error("Timed out");
     } catch (e) {
+      if (!isMountedRef.current) return;
       refundCredits(
         effect.credits,
         `Refunded ${effect.credits}c: effect ${effect.name} failed`

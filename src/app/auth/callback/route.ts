@@ -55,7 +55,7 @@ export async function GET(request: Request) {
     const oauthName = meta.full_name || meta.name;
     const oauthAvatar = meta.avatar_url || meta.picture;
     if (oauthName || oauthAvatar) {
-      await supabase
+      const { error: profileSyncErr } = await supabase
         .from("profiles")
         .update({
           ...(oauthName ? { display_name: String(oauthName) } : {}),
@@ -63,6 +63,12 @@ export async function GET(request: Request) {
           updated_at: new Date().toISOString(),
         })
         .eq("id", data.user.id);
+      if (profileSyncErr) {
+        console.error(
+          "[auth/callback] Failed to sync OAuth profile metadata:",
+          profileSyncErr.message
+        );
+      }
     }
   }
 

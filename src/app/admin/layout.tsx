@@ -12,6 +12,9 @@ import {
   CreditCard,
   ClipboardList,
   ShieldCheck,
+  Lock,
+  LogOut,
+  Loader2,
 } from "lucide-react";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 
@@ -66,11 +69,37 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
 
   const currentLabel = BREADCRUMB_LABELS[pathname] || "Overview";
+  const [authChecked, setAuthChecked] = React.useState(false);
+  const [adminAuthenticated, setAdminAuthenticated] = React.useState(false);
+  const [adminConfigured, setAdminConfigured] = React.useState(true);
+  const [loginUsername, setLoginUsername] = React.useState("ops@reelmux.com");
+  const [loginSecret, setLoginSecret] = React.useState("");
+  const [loginError, setLoginError] = React.useState<string | null>(null);
+  const [loggingIn, setLoggingIn] = React.useState(false);
+
   const [customAdminName, setCustomAdminName] = React.useState<string>("ops@reelmux.com");
   const [editingAdminName, setEditingAdminName] = React.useState(false);
   const [draftAdminName, setDraftAdminName] = React.useState("ops@reelmux.com");
 
+  const checkAdminSession = React.useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/session", { cache: "no-store" });
+      const data = await res.json();
+      setAdminConfigured(Boolean(data.configured));
+      setAdminAuthenticated(Boolean(data.authenticated));
+      if (data.actorEmail) {
+        setCustomAdminName(String(data.actorEmail));
+        setDraftAdminName(String(data.actorEmail));
+      }
+    } catch {
+      setAdminAuthenticated(false);
+    } finally {
+      setAuthChecked(true);
+    }
+  }, []);
+
   React.useEffect(() => {
+    checkAdminSession();
     try {
       const saved = window.localStorage.getItem("reelmux_admin_operator");
       if (saved && saved.trim()) {
@@ -80,7 +109,39 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     } catch {
       // ignore storage errors
     }
-  }, []);
+  }, [checkAdminSession]);
+
+  const handleAdminLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoggingIn(true);
+    setLoginError(null);
+    try {
+      const res = await fetch("/api/admin/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: loginUsername, secret: loginSecret }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setLoginError(data.error || "Admin authentication failed.");
+        return;
+      }
+      setLoginSecret("");
+      setAdminAuthenticated(true);
+      if (data.actorEmail) {
+        setCustomAdminName(String(data.actorEmail));
+      }
+    } catch {
+      setLoginError("Network error while verifying admin credentials.");
+    } finally {
+      setLoggingIn(false);
+    }
+  };
+
+  const handleAdminLogout = async () => {
+    await fetch("/api/admin/session", { method: "DELETE" }).catch(() => {});
+    setAdminAuthenticated(false);
+  };
 
   const saveAdminName = async () => {
     const clean = draftAdminName.trim() || "ops@reelmux.com";
@@ -101,6 +162,91 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       // ignore network error
     }
   };
+
+  if (!authChecked) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#08090C] text-zinc-300">
+        <Loader2 className="h-5 w-5 animate-spin text-[#D4FF00]" />
+      </div>
+    );
+  }
+
+  if (!adminAuthenticated) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#08090C] px-4 text-zinc-100">
+        <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0D1017] p-7 shadow-2xl">
+          <div className="flex items-center justify-between">
+            <BrandLogo href="/admin" badge="Admin" size="sm" />
+            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2.5 py-0.5 text-[11px] font-medium text-emerald-300">
+              <Lock className="h-3 w-3" />
+              Isolated Ops Gate
+            </span>
+          </div>
+          <h1 className="mt-5 text-xl font-bold text-white">
+            Admin Console Sign In
+          </h1>
+          <p className="mt-1 text-xs text-zinc-400">
+            Admin authentication is strictly isolated from public website Google accounts.
+          </p>
+
+          {!adminConfigured && (
+            <div className="mt-4 rounded-xl border border-amber-400/30 bg-amber-400/10 p-3 text-xs text-amber-200">
+              Server env var <code className="font-mono">ADMIN_ACCESS_KEY</code> (or{" "}
+              <code className="font-mono">ADMIN_PASSWORD</code>) is not configured yet.
+            </div>
+          )}
+
+          {loginError && (
+            <div className="mt-4 rounded-xl border border-rose-400/30 bg-rose-400/10 p-3 text-xs text-rose-200">
+              {loginError}
+            </div>
+          )}
+
+          <form onSubmit={handleAdminLogin} className="mt-5 space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-zinc-300 mb-1.5">
+                Operator Handle / Email
+              </label>
+              <input
+                type="text"
+                required
+                value={loginUsername}
+                onChange={(e) => setLoginUsername(e.target.value)}
+                className="w-full rounded-xl border border-white/15 bg-[#08090C] px-3.5 py-2.5 text-sm text-white focus:border-[#D4FF00] focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-zinc-300 mb-1.5">
+                Admin Access Key
+              </label>
+              <input
+                type="password"
+                required
+                value={loginSecret}
+                onChange={(e) => setLoginSecret(e.target.value)}
+                placeholder="Enter ADMIN_ACCESS_KEY"
+                className="w-full rounded-xl border border-white/15 bg-[#08090C] px-3.5 py-2.5 text-sm text-white focus:border-[#D4FF00] focus:outline-none"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loggingIn}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#D4FF00] py-2.5 text-sm font-bold text-black hover:bg-[#e2ff4d] disabled:opacity-50 cursor-pointer"
+            >
+              {loggingIn ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Verifying...
+                </>
+              ) : (
+                "Unlock Admin Console"
+              )}
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-[#08090C] text-zinc-100">
@@ -224,6 +370,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 </span>
               </button>
             )}
+            <button
+              type="button"
+              onClick={handleAdminLogout}
+              title="Sign out of Admin Console"
+              className="inline-flex items-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 text-[11px] text-zinc-400 hover:border-rose-400/40 hover:text-rose-200 cursor-pointer"
+            >
+              <LogOut className="h-3 w-3" />
+              Sign out
+            </button>
           </div>
         </header>
 

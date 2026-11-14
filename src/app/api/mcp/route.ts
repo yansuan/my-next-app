@@ -1,6 +1,8 @@
+import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { MODELS_CATALOG, calculateJobCredits } from "@/lib/catalog/models";
 import { createYirJob, getYirJobStatus } from "@/lib/yir/client";
+import { createSupabaseServiceClient } from "@/lib/supabase/server";
 
 const MCP_TOOLS_SCHEMA = [
   {
@@ -93,7 +95,7 @@ const MCP_TOOLS_SCHEMA = [
   {
     name: "get_generation",
     description:
-      "Poll the status and output media URLs of a generation job. Requires scope generation:read.",
+      "Poll the status and output media URLs of a generation job. Requires Authorization: Bearer rmx_... with scope generation:read.",
     inputSchema: {
       type: "object",
       required: ["generation_id"],
@@ -105,16 +107,81 @@ const MCP_TOOLS_SCHEMA = [
   },
   {
     name: "list_generations",
-    description: "List recent generation jobs for the authenticated account.",
+    description:
+      "List recent generation jobs for the authenticated account. Requires Authorization: Bearer rmx_... with scope generation:read.",
     inputSchema: {
       type: "object",
       properties: {
         limit: { type: "number", default: 10 },
-        cursor: { type: "string" },
       },
     },
   },
 ];
+
+async function authenticateMcpBearer(req: NextRequest, requiredScope: string) {
+  const authHeader = req.headers.get("authorization") || "";
+  if (!authHeader.startsWith("Bearer ")) {
+    return {
+      ok: false as const,
+      status: 401,
+      error: "Missing Authorization: Bearer rmx_... header.",
+    };
+  }
+
+  const rawToken = authHeader.slice(7).trim();
+  if (!rawToken.startsWith("rmx_") || rawToken.length < 16) {
+    return {
+      ok: false as const,
+      status: 401,
+      error: "Invalid Bearer API key format.",
+    };
+  }
+
+  const supabase = createSupabaseServiceClient();
+  if (!supabase) {
+    return {
+      ok: false as const,
+      status: 503,
+      error: "Server authentication database is not configured.",
+    };
+  }
+
+  const keyHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+  const { data: keyRow, error } = await supabase
+    .from("api_keys")
+    .select("id, user_id, scopes, revoked_at")
+    .eq("key_hash", keyHash)
+    .is("revoked_at", null)
+    .maybeSingle();
+
+  if (error || !keyRow) {
+    return {
+      ok: false as const,
+      status: 401,
+      error: "Invalid or revoked API key.",
+    };
+  }
+
+  const scopes: string[] = Array.isArray(keyRow.scopes) ? keyRow.scopes : [];
+  if (!scopes.includes(requiredScope) && !scopes.includes("*")) {
+    return {
+      ok: false as const,
+      status: 403,
+      error: `API key missing required scope: ${requiredScope}`,
+    };
+  }
+
+  await supabase
+    .from("api_keys")
+    .update({ last_used_at: new Date().toISOString() })
+    .eq("id", keyRow.id);
+
+  return {
+    ok: true as const,
+    supabase,
+    userId: String(keyRow.user_id),
+  };
+}
 
 export async function GET() {
   return NextResponse.json({
@@ -228,12 +295,7 @@ export async function POST(req: NextRequest) {
           jsonrpc: "2.0",
           id,
           result: {
-            content: [
-              {
-                type: "text",
-                text: JSON.stringify(model, null, 2),
-              },
-            ],
+            content: [{ type: "text", text: JSON.stringify(model, null, 2) }],
           },
         });
       }
@@ -266,7 +328,8 @@ export async function POST(req: NextRequest) {
                       aspect_ratio: args.aspect_ratio || "16:9",
                       audio: Boolean(args.audio ?? true),
                     },
-                    policy: "Credits are held during generation and auto-refunded if the job fails.",
+                    policy:
+                      "Credits are held during generation and auto-refunded if the job fails.",
                   },
                   null,
                   2
@@ -278,28 +341,111 @@ export async function POST(req: NextRequest) {
       }
 
       if (toolName === "create_generation") {
+        const auth = await authenticateMcpBearer(req, "generation:create");
+        if (!auth.ok) {
+          return NextResponse.json(
+            {
+              jsonrpc: "2.0",
+              id,
+              error: { code: -32001, message: auth.error },
+            },
+            { status: auth.status }
+          );
+        }
+
+        const promptText = String(args.prompt || "").trim();
+        if (!promptText) {
+          return NextResponse.json(
+            {
+              jsonrpc: "2.0",
+              id,
+              error: { code: -32602, message: "prompt is required" },
+            },
+            { status: 400 }
+          );
+        }
+
         const model =
           MODELS_CATALOG.find((m) => m.id === args.model_id) ?? MODELS_CATALOG[0];
+        const safeDuration = Math.max(1, Math.min(60, Number(args.duration) || 5));
         const estimatedCredits = calculateJobCredits({
           modelId: model.id,
           resolution: args.resolution || "1080p",
-          durationSec: Number(args.duration) || 5,
+          durationSec: safeDuration,
           withAudio: Boolean(args.native_audio ?? true),
         });
-        const job = await createYirJob({
-          model: model.yirModelId,
-          input: {
-            type: args.image_url ? "image" : "text",
-            prompt: String(args.prompt || "Cinematic scene"),
-            image_url: args.image_url,
-          },
-          parameters: {
-            resolution: args.resolution || "1080p",
-            aspect_ratio: args.aspect_ratio || "16:9",
-            duration: Number(args.duration) || 5,
-            with_audio: Boolean(args.native_audio ?? true),
-          },
-        });
+
+        const { data: supabaseJobUuid, error: rpcErr } = await auth.supabase.rpc(
+          "reserve_credits_for_job",
+          {
+            p_user_id: auth.userId,
+            p_tool_slug: String(args.mode || "text-to-video"),
+            p_category: model.category,
+            p_model_id: model.id,
+            p_prompt: promptText,
+            p_parameters: {
+              resolution: args.resolution || "1080p",
+              aspectRatio: args.aspect_ratio || "16:9",
+              durationSec: safeDuration,
+              withAudio: Boolean(args.native_audio ?? true),
+            },
+            p_credits_cost: estimatedCredits,
+          }
+        );
+
+        if (rpcErr || !supabaseJobUuid) {
+          return NextResponse.json(
+            {
+              jsonrpc: "2.0",
+              id,
+              error: {
+                code: -32002,
+                message: rpcErr?.message || "Insufficient credits.",
+              },
+            },
+            { status: 402 }
+          );
+        }
+
+        let job;
+        try {
+          job = await createYirJob({
+            model: model.yirModelId,
+            input: {
+              type: args.image_url ? "image" : "text",
+              prompt: promptText,
+              image_url: args.image_url,
+            },
+            parameters: {
+              resolution: args.resolution || "1080p",
+              aspect_ratio: args.aspect_ratio || "16:9",
+              duration: safeDuration,
+              with_audio: Boolean(args.native_audio ?? true),
+            },
+          });
+        } catch (dispatchErr: unknown) {
+          await auth.supabase.rpc("finalize_job_credits", {
+            p_job_id: supabaseJobUuid,
+            p_final_status: "failed",
+            p_source_url: null,
+            p_r2_url: null,
+            p_error:
+              dispatchErr instanceof Error
+                ? dispatchErr.message
+                : "MCP job dispatch failed",
+          });
+          throw dispatchErr;
+        }
+
+        await auth.supabase
+          .from("generation_jobs")
+          .update({
+            yir_job_id: job.id,
+            status: job.status === "processing" ? "processing" : "queued",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", supabaseJobUuid);
+
         return NextResponse.json({
           jsonrpc: "2.0",
           id,
@@ -310,6 +456,7 @@ export async function POST(req: NextRequest) {
                 text: JSON.stringify(
                   {
                     generation_id: job.id,
+                    job_uuid: supabaseJobUuid,
                     model_id: model.id,
                     status: job.status,
                     estimated_credits: estimatedCredits,
@@ -324,25 +471,89 @@ export async function POST(req: NextRequest) {
       }
 
       if (toolName === "get_generation") {
+        const auth = await authenticateMcpBearer(req, "generation:read");
+        if (!auth.ok) {
+          return NextResponse.json(
+            {
+              jsonrpc: "2.0",
+              id,
+              error: { code: -32001, message: auth.error },
+            },
+            { status: auth.status }
+          );
+        }
+
+        const genId = String(args.generation_id || "");
+        const { data: jobRow } = await auth.supabase
+          .from("generation_jobs")
+          .select("id, yir_job_id, model_id, credit_settled")
+          .eq("user_id", auth.userId)
+          .or(`yir_job_id.eq.${genId},id.eq.${genId}`)
+          .maybeSingle();
+
+        if (!jobRow) {
+          return NextResponse.json(
+            {
+              jsonrpc: "2.0",
+              id,
+              error: { code: -32004, message: "Generation job not found." },
+            },
+            { status: 404 }
+          );
+        }
+
         const status = await getYirJobStatus(
-          String(args.generation_id || "yir_sim_0"),
-          args.model_id
+          jobRow.yir_job_id || genId,
+          args.model_id || jobRow.model_id
         );
+
+        if (
+          !jobRow.credit_settled &&
+          (status.status === "succeeded" ||
+            status.status === "failed" ||
+            status.status === "canceled")
+        ) {
+          await auth.supabase.rpc("finalize_job_credits", {
+            p_job_id: jobRow.id,
+            p_final_status: status.status,
+            p_source_url: status.output?.media_url || null,
+            p_r2_url: null,
+            p_error: status.error?.message || null,
+          });
+        }
+
         return NextResponse.json({
           jsonrpc: "2.0",
           id,
           result: {
-            content: [
-              {
-                type: "text",
-                text: JSON.stringify(status, null, 2),
-              },
-            ],
+            content: [{ type: "text", text: JSON.stringify(status, null, 2) }],
           },
         });
       }
 
       if (toolName === "list_generations") {
+        const auth = await authenticateMcpBearer(req, "generation:read");
+        if (!auth.ok) {
+          return NextResponse.json(
+            {
+              jsonrpc: "2.0",
+              id,
+              error: { code: -32001, message: auth.error },
+            },
+            { status: auth.status }
+          );
+        }
+
+        const limit = Math.max(1, Math.min(50, Number(args.limit) || 10));
+        const { data: rows } = await auth.supabase
+          .from("generation_jobs")
+          .select(
+            "id, yir_job_id, tool_slug, category, model_id, prompt, credits_cost, status, source_output_url, created_at"
+          )
+          .eq("user_id", auth.userId)
+          .order("created_at", { ascending: false })
+          .limit(limit);
+
         return NextResponse.json({
           jsonrpc: "2.0",
           id,
@@ -352,7 +563,7 @@ export async function POST(req: NextRequest) {
                 type: "text",
                 text: JSON.stringify(
                   {
-                    generations: [],
+                    generations: rows || [],
                     next_cursor: null,
                   },
                   null,

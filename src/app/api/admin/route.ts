@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminStore } from "@/lib/admin/store";
+import { requireAdminSession } from "@/lib/admin/auth";
 
 export async function GET(req: NextRequest) {
+  const auth = await requireAdminSession();
+  if (!auth.ok) return auth.response;
+
   const store = getAdminStore();
   const { searchParams } = new URL(req.url);
   const query = (searchParams.get("q") || "").trim().toLowerCase();
@@ -16,7 +20,7 @@ export async function GET(req: NextRequest) {
       )
     : store.users;
 
-  // Compute live KPI summary
+  // Compute live KPI summary without artificial hardcoded offsets
   const totalRevenueUsd = store.orders
     .filter((o) => o.status === "paid")
     .reduce((sum, o) => sum + o.amountUsd, 0);
@@ -27,17 +31,22 @@ export async function GET(req: NextRequest) {
     .filter((c) => c.signal === "ip")
     .reduce((sum, c) => sum + Math.max(0, c.accounts - c.granted) * 100, 0);
 
+  const activeUsersCount = store.users.filter((u) => u.status === "active").length;
+  const succeededGenerations = store.generations.filter(
+    (g) => g.status === "succeeded"
+  ).length;
+  const refundedGenerations = store.generations.filter(
+    (g) => g.status === "refunded" || g.status === "failed"
+  ).length;
+
   return NextResponse.json({
     metrics: {
-      totalUsers: store.users.length + 42,
-      activeUsers7d: 38,
-      totalGenerations: store.generations.length + 312,
-      succeededGenerations:
-        store.generations.filter((g) => g.status === "succeeded").length + 298,
-      refundedGenerations:
-        store.generations.filter((g) => g.status === "refunded" || g.status === "failed").length +
-        14,
-      totalUploads: store.uploads.length + 124,
+      totalUsers: store.users.length,
+      activeUsers7d: activeUsersCount,
+      totalGenerations: store.generations.length,
+      succeededGenerations,
+      refundedGenerations,
+      totalUploads: store.uploads.length,
       totalRevenueUsd,
       paidOrdersCount: store.orders.filter((o) => o.status === "paid").length,
       abuseClustersCount: store.abuseClusters.length,
@@ -54,9 +63,13 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireAdminSession();
+  if (!auth.ok) return auth.response;
+
   const store = getAdminStore();
   const body = await req.json();
-  const { action, actorEmail = "ops@reelmux.com" } = body;
+  const { action } = body;
+  const actorEmail = auth.session.actorEmail;
   const nowStr = new Date().toISOString().replace("T", " ").slice(0, 16) + " UTC";
 
   if (action === "update_admin_profile") {

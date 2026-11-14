@@ -235,8 +235,23 @@ function normalizeYirStatus(
   }
 }
 
+interface YirOutputCandidate {
+  url?: string;
+  thumbnail_url?: string;
+  duration?: number;
+}
+
+interface YirRawPayload {
+  output?: YirJobResponse["output"];
+  result?: { files?: YirOutputCandidate[] };
+  files?: YirOutputCandidate[];
+  data?: YirOutputCandidate[];
+  final_provider?: string;
+  channel?: { provider_label?: string };
+}
+
 function extractYirOutput(
-  raw: Record<string, any>,
+  raw: YirRawPayload,
   fallbackProvider?: string
 ): YirJobResponse["output"] {
   if (raw.output?.media_url) {

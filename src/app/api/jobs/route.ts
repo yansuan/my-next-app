@@ -1,11 +1,46 @@
 import { NextRequest, NextResponse } from "next/server";
 import { MODELS_CATALOG, calculateJobCredits } from "@/lib/catalog/models";
 import { createYirJob } from "@/lib/yir/client";
-import { createSupabaseServiceClient } from "@/lib/supabase/server";
+import {
+  createSupabaseServiceClient,
+  getAuthenticatedUser,
+} from "@/lib/supabase/server";
 import { getAdminStore } from "@/lib/admin/store";
 
 export async function POST(req: NextRequest) {
   try {
+    const user = await getAuthenticatedUser();
+    if (!user) {
+      return NextResponse.json(
+        { error: "Authentication required. Please sign in with Google." },
+        { status: 401 }
+      );
+    }
+
+    const supabase = createSupabaseServiceClient();
+    if (!supabase) {
+      return NextResponse.json(
+        {
+          error:
+            "Server billing service is not configured (missing SUPABASE_SERVICE_ROLE_KEY).",
+        },
+        { status: 503 }
+      );
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("status")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profile?.status === "banned") {
+      return NextResponse.json(
+        { error: "Account suspended. Please contact support." },
+        { status: 403 }
+      );
+    }
+
     const body = await req.json();
     const {
       toolSlug = "text-to-video",
@@ -20,8 +55,6 @@ export async function POST(req: NextRequest) {
       firstFrameUrl,
       lastFrameUrl,
       referenceUrls,
-      userId,
-      userEmail = "creator@reelmux.com",
     } = body;
 
     if (!prompt || typeof prompt !== "string" || !prompt.trim()) {
@@ -35,84 +68,104 @@ export async function POST(req: NextRequest) {
       MODELS_CATALOG.find((m) => m.id === modelId || m.yirModelId === modelId) ??
       MODELS_CATALOG[0];
 
+    const safeDuration = Math.max(1, Math.min(60, Number(durationSec) || 5));
     const creditsCost = calculateJobCredits({
       modelId: modelSpec.id,
       resolution,
-      durationSec,
-      withAudio,
+      durationSec: safeDuration,
+      withAudio: Boolean(withAudio),
     });
 
-    // Optional: If Supabase service client + userId are configured, reserve credits atomically in Postgres
-    let supabaseJobUuid: string | null = null;
-    const supabase = createSupabaseServiceClient();
-    if (supabase && userId) {
-      const { data: rpcJobId, error: rpcErr } = await supabase.rpc(
-        "reserve_credits_for_job",
-        {
-          p_user_id: userId,
-          p_tool_slug: toolSlug,
-          p_category: modelSpec.category,
-          p_model_id: modelSpec.id,
-          p_prompt: prompt.trim(),
-          p_parameters: { resolution, aspectRatio, durationSec, withAudio },
-          p_credits_cost: creditsCost,
-        }
-      );
-
-      if (rpcErr) {
-        return NextResponse.json(
-          { error: rpcErr.message || "Failed to reserve credits in Supabase" },
-          { status: 402 }
-        );
+    // Reserve credits atomically in Postgres before calling upstream Yir.ai
+    const { data: supabaseJobUuid, error: rpcErr } = await supabase.rpc(
+      "reserve_credits_for_job",
+      {
+        p_user_id: user.id,
+        p_tool_slug: String(toolSlug),
+        p_category: modelSpec.category,
+        p_model_id: modelSpec.id,
+        p_prompt: prompt.trim(),
+        p_parameters: {
+          resolution,
+          aspectRatio,
+          durationSec: safeDuration,
+          withAudio: Boolean(withAudio),
+        },
+        p_credits_cost: creditsCost,
       }
-      supabaseJobUuid = rpcJobId;
+    );
+
+    if (rpcErr || !supabaseJobUuid) {
+      return NextResponse.json(
+        { error: rpcErr?.message || "Failed to reserve credits in Supabase." },
+        { status: 402 }
+      );
     }
 
-    // Dispatch job to Yir.ai Router (/v1/jobs)
-    const yirJob = await createYirJob({
-      model: modelSpec.yirModelId,
-      input: {
-        type: inputType,
-        prompt: prompt.trim(),
-        image_url: imageUrl,
-        first_frame_url: firstFrameUrl,
-        last_frame_url: lastFrameUrl,
-        reference_urls: referenceUrls,
-      },
-      parameters: {
-        resolution,
-        aspect_ratio: aspectRatio,
-        duration: durationSec,
-        with_audio: withAudio,
-        n: 1,
-      },
-    });
+    let yirJob;
+    try {
+      yirJob = await createYirJob({
+        model: modelSpec.yirModelId,
+        input: {
+          type: inputType,
+          prompt: prompt.trim(),
+          image_url: imageUrl,
+          first_frame_url: firstFrameUrl,
+          last_frame_url: lastFrameUrl,
+          reference_urls: referenceUrls,
+        },
+        parameters: {
+          resolution,
+          aspect_ratio: aspectRatio,
+          duration: safeDuration,
+          with_audio: Boolean(withAudio),
+          n: 1,
+        },
+      });
+    } catch (dispatchErr: unknown) {
+      const dispatchMsg =
+        dispatchErr instanceof Error
+          ? dispatchErr.message
+          : "Upstream generation dispatch failed";
+      await supabase.rpc("finalize_job_credits", {
+        p_job_id: supabaseJobUuid,
+        p_final_status: "failed",
+        p_source_url: null,
+        p_r2_url: null,
+        p_error: dispatchMsg,
+      });
+      throw dispatchErr;
+    }
 
-    // Also record in Admin Console live store
+    await supabase
+      .from("generation_jobs")
+      .update({
+        yir_job_id: yirJob.id,
+        status: yirJob.status === "processing" ? "processing" : "queued",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", supabaseJobUuid);
+
     const store = getAdminStore();
     store.generations.unshift({
-      id: `gen-${Math.floor(1000 + Math.random() * 9000)}`,
+      id: String(supabaseJobUuid),
       upstreamJobId: yirJob.id,
-      userEmail: String(userEmail),
-      toolSlug,
+      userEmail: user.email,
+      toolSlug: String(toolSlug),
       category: modelSpec.category,
       modelId: modelSpec.id,
       modelName: modelSpec.name,
       prompt: prompt.trim(),
       resolution: `${resolution} · ${aspectRatio}`,
-      durationSec: modelSpec.category === "video" ? durationSec : undefined,
+      durationSec: modelSpec.category === "video" ? safeDuration : undefined,
       creditsCost,
-      status: "succeeded",
-      outputUrl:
-        modelSpec.category === "video"
-          ? modelSpec.previewVideo || "/examples/seedance-2-5-train.mp4"
-          : modelSpec.previewPoster || "/examples/gpt-image-2-6-poster.webp",
-      latencySec: 18.4,
+      status: yirJob.status === "processing" ? "processing" : "queued",
+      latencySec: 0,
       createdAt: new Date().toISOString().replace("T", " ").slice(0, 16) + " UTC",
     });
 
     return NextResponse.json({
-      jobId: supabaseJobUuid || yirJob.id,
+      jobId: supabaseJobUuid,
       yirJobId: yirJob.id,
       model: modelSpec.yirModelId,
       modelName: modelSpec.name,

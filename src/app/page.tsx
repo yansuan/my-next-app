@@ -51,10 +51,27 @@ export default function HomePage() {
   );
   const [deckModel, setDeckModel] = useState("seedance-2-5");
 
-  // Randomize the hero background video on every page open (matching FrameMux behavior)
+  // Rotate hero showcase video on every page open (never repeats the previous visit's reel)
   useEffect(() => {
-    const randomIdx = Math.floor(Math.random() * HERO_BG_VIDEOS.length);
-    setHeroBgIndex(randomIdx);
+    const total = HERO_BG_VIDEOS.length;
+    if (total <= 1) return;
+    let prevIdx = -1;
+    try {
+      const raw = window.localStorage.getItem("reelmux_hero_reel_idx");
+      if (raw !== null) prevIdx = Number(raw);
+    } catch {
+      // ignore storage access issues
+    }
+    let nextIdx = Math.floor(Math.random() * total);
+    if (nextIdx === prevIdx) {
+      nextIdx = (prevIdx + 1 + Math.floor(Math.random() * (total - 1))) % total;
+    }
+    setHeroBgIndex(nextIdx);
+    try {
+      window.localStorage.setItem("reelmux_hero_reel_idx", String(nextIdx));
+    } catch {
+      // ignore storage write errors
+    }
   }, []);
 
   const currentHeroBg = HERO_BG_VIDEOS[heroBgIndex] ?? HERO_BG_VIDEOS[0];
@@ -137,14 +154,14 @@ export default function HomePage() {
           />
         </div>
 
-        {/* Multi-Layer Cinema Readability Scrim */}
+        {/* Multi-Layer Cinema Readability Scrim (keeps showcase video vivid while protecting contrast) */}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-[#06070A]/75 via-[#06070A]/55 to-[#06070A]"
+          className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-[#06070A]/65 via-[#06070A]/40 to-[#06070A]"
         />
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_center,transparent_20%,#06070A_95%)] opacity-80"
+          className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_center,transparent_25%,#06070A_95%)] opacity-70"
         />
 
         {/* Floating Bottom-Right Hero Video Controls (1:1 FrameMux Pause/Play + Reel Switcher) */}
@@ -206,11 +223,24 @@ export default function HomePage() {
                 images &amp; sound on one stage
               </span>
             </h1>
-            <p className="mx-auto mt-5 max-w-2xl text-base sm:text-lg text-zinc-200 leading-relaxed">
-              The AI Multiplexer Studio for filmmakers and creative teams. Sequence 4-shot
-              storyboards, run side-by-side model arenas across Kling 4.0, Seedance 2.5, Veo 3.1,
-              Wan 3.0, FLUX.2 &amp; Suno v6, and pay with one escrow-backed balance.
+            <p className="mx-auto mt-5 max-w-2xl text-base sm:text-lg text-zinc-100 leading-relaxed drop-shadow-sm">
+              Stop paying for 6 separate AI subscriptions. Run Kling 4.0, Veo 3.1, Seedance 2.5
+              &amp; Suno v6 from one non-expiring balance — with instant auto-refunds if any render fails.
             </p>
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs font-medium text-zinc-300">
+              <span className="inline-flex items-center gap-1.5">
+                <CheckCircle2 className="h-3.5 w-3.5 text-[#D4FF00]" />
+                100 Free Credits · No Card Needed
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <CheckCircle2 className="h-3.5 w-3.5 text-[#D4FF00]" />
+                Credits Never Expire
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <CheckCircle2 className="h-3.5 w-3.5 text-[#D4FF00]" />
+                100% Auto-Refund on Failed Jobs
+              </span>
+            </div>
 
             {/* ===============================================================
                 REELMUX DIRECTOR'S INSTANT COMMAND DECK (Unique to ReelMux)

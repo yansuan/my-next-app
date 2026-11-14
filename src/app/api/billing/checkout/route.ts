@@ -1,25 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminStore, AdminOrderRecord } from "@/lib/admin/store";
-import { createSupabaseServiceClient } from "@/lib/supabase/server";
+import {
+  createSupabaseServiceClient,
+  getAuthenticatedUser,
+} from "@/lib/supabase/server";
 import { createWaffoClient, getWaffoConfig } from "@/lib/waffo/client";
+import { resolveCatalogPlan } from "@/lib/catalog/pricing";
 
 export async function POST(req: NextRequest) {
   try {
+    const user = await getAuthenticatedUser();
+    if (!user) {
+      return NextResponse.json(
+        { error: "Authentication required. Please sign in with Google." },
+        { status: 401 }
+      );
+    }
+
     const body = await req.json();
-    const {
-      userEmail = "creator@reelmux.com",
-      itemId = "creator",
-      itemName = "Creator Pack",
-      itemType = "credit_pack",
-      amountUsd = 29,
-      creditsGranted = 3200,
-      paymentMethod = "Waffo Pancake (pancake.waffo.ai)",
-    } = body;
+    const rawItemId = String(body?.itemId || "creator-pack");
+    const plan = resolveCatalogPlan(rawItemId);
+    if (!plan) {
+      return NextResponse.json(
+        { error: `Unknown billing plan or credit pack: ${rawItemId}` },
+        { status: 400 }
+      );
+    }
+
+    const paymentMethod = String(
+      body?.paymentMethod || "Waffo Pancake (pancake.waffo.ai)"
+    ).slice(0, 120);
 
     const ipAddress =
       req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
       req.headers.get("x-real-ip") ||
-      "103.149.28.11";
+      "unknown";
 
     const nowIso =
       new Date().toISOString().replace("T", " ").slice(0, 16) + " UTC";
@@ -27,14 +42,14 @@ export async function POST(req: NextRequest) {
     const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, "");
     const orderNo = `RMX-${datePart}-${randSuffix}`;
 
-    // 1. Attempt live Waffo Pancake Authenticated Session creation if credentials exist
     const waffoCfg = getWaffoConfig();
     const waffoClient = createWaffoClient();
-    const mappedProductId = waffoCfg.productMap[itemId] || "";
-    let waffoCheckoutUrl = `https://pancake.waffo.ai/checkout/${
+    const mappedProductId = waffoCfg.productMap[plan.waffoProductKey] || "";
+
+    let waffoCheckoutUrl = `https://pancake.waffo.ai/checkout/${encodeURIComponent(
       waffoCfg.storeSlug || "reelmux"
-    }/${mappedProductId || itemId}?currency=USD&email=${encodeURIComponent(
-      userEmail
+    )}/${encodeURIComponent(mappedProductId || plan.waffoProductKey)}?currency=USD&email=${encodeURIComponent(
+      user.email
     )}&success_url=${encodeURIComponent(
       `https://reelmux.com/dashboard?payment=success&order=${orderNo}`
     )}`;
@@ -45,8 +60,8 @@ export async function POST(req: NextRequest) {
         const session = await waffoClient.checkout.authenticated.create({
           productId: mappedProductId,
           currency: "USD",
-          buyerIdentity: String(userEmail),
-          buyerEmail: String(userEmail),
+          buyerIdentity: user.id,
+          buyerEmail: user.email,
           orderMerchantExternalId: orderNo,
         });
         if (session?.checkoutUrl) {
@@ -58,107 +73,55 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const newOrder: AdminOrderRecord = {
+    const pendingOrder: AdminOrderRecord = {
       id: `ord-${Date.now()}`,
       orderNo,
-      userEmail,
-      itemType: itemType === "subscription" ? "subscription" : "credit_pack",
-      itemName: `${itemName} (${Number(creditsGranted).toLocaleString()} credits)`,
-      amountUsd: Number(amountUsd),
-      creditsGranted: Number(creditsGranted),
+      userEmail: user.email,
+      itemType: plan.itemType,
+      itemName: `${plan.itemName} (${plan.credits.toLocaleString()} credits)`,
+      amountUsd: plan.amountUsd,
+      creditsGranted: plan.credits,
       paymentMethod,
-      status: "paid",
+      status: "pending",
       ipAddress,
       createdAt: nowIso,
     };
 
     const store = getAdminStore();
-    store.orders.unshift(newOrder);
-
-    const existingUser = store.users.find(
-      (u) => u.email.toLowerCase() === String(userEmail).toLowerCase()
-    );
-    if (existingUser) {
-      existingUser.balanceAvailable += Number(creditsGranted);
-      existingUser.paidTotalUsd = Number(
-        (existingUser.paidTotalUsd + Number(amountUsd)).toFixed(2)
-      );
-      if (itemType === "subscription") {
-        existingUser.planTier = "pro_monthly";
-      } else if (itemId === "studio") {
-        existingUser.planTier = "studio";
-      } else if (itemId === "creator") {
-        existingUser.planTier = "creator";
-      } else if (itemId === "starter") {
-        existingUser.planTier = "starter";
-      }
-    } else {
-      store.users.unshift({
-        id: `usr-${Date.now()}`,
-        email: userEmail,
-        displayName: userEmail.split("@")[0],
-        planTier:
-          itemType === "subscription"
-            ? "pro_monthly"
-            : itemId === "studio"
-              ? "studio"
-              : itemId === "creator"
-                ? "creator"
-                : "starter",
-        balanceAvailable: 100 + Number(creditsGranted),
-        balanceReserved: 0,
-        freeCreditsGranted: true,
-        paidTotalUsd: Number(amountUsd),
-        generationsCount: 0,
-        signupIp: ipAddress,
-        deviceFingerprint: "9f81c20b4e77a12d8890c123f45a6789",
-        status: "active",
-        createdAt: nowIso,
-      });
-    }
-
+    store.orders.unshift(pendingOrder);
     store.auditLogs.unshift({
       id: `aud-${Date.now()}`,
-      actorEmail: userEmail,
-      action:
-        itemType === "subscription"
-          ? "subscription.activated"
-          : "order.completed",
+      actorEmail: user.email,
+      action: "checkout.session.created",
       targetType: "order",
       targetId: orderNo,
-      summary: `${
-        itemType === "subscription"
-          ? "Activated subscription"
-          : "Purchased credit pack"
-      } ${itemName} (+${Number(creditsGranted).toLocaleString()} credits, $${Number(
-        amountUsd
-      ).toFixed(2)} USD via ${paymentMethod}).`,
+      summary: `Created pending Waffo checkout for ${plan.itemName} ($${plan.amountUsd.toFixed(
+        2
+      )} USD · ${plan.credits.toLocaleString()} credits pending webhook confirmation).`,
       ipAddress,
       createdAt: nowIso,
     });
 
-    try {
-      const supabase = createSupabaseServiceClient();
-      if (supabase) {
-        await supabase.from("billing_orders").insert({
-          order_no: orderNo,
-          user_email: userEmail,
-          item_type: newOrder.itemType,
-          item_name: newOrder.itemName,
-          amount_usd: newOrder.amountUsd,
-          credits_granted: newOrder.creditsGranted,
-          payment_method: newOrder.paymentMethod,
-          status: "paid",
-          ip_address: ipAddress,
-        });
-      }
-    } catch {
-      // Non-blocking fallback
+    const supabase = createSupabaseServiceClient();
+    if (supabase) {
+      await supabase.from("billing_orders").insert({
+        order_no: orderNo,
+        user_id: user.id,
+        user_email: user.email,
+        item_type: plan.itemType,
+        item_id: plan.itemId,
+        item_name: pendingOrder.itemName,
+        amount_cents: plan.amountCents,
+        credits_granted: plan.credits,
+        payment_method: paymentMethod,
+        status: "pending",
+        ip_address: ipAddress,
+      });
     }
 
     return NextResponse.json({
       ok: true,
-      order: newOrder,
+      order: pendingOrder,
       waffoCheckoutUrl,
       waffoSessionLive,
     });

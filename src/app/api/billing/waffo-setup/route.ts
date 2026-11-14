@@ -7,8 +7,12 @@ import {
   runWaffoSandboxTestSuite,
 } from "@/lib/waffo/client";
 import { getAdminStore } from "@/lib/admin/store";
+import { requireAdminSession } from "@/lib/admin/auth";
 
 export async function GET() {
+  const auth = await requireAdminSession();
+  if (!auth.ok) return auth.response;
+
   const cfg = getWaffoConfig();
   return NextResponse.json({
     configured: Boolean(cfg.merchantId && cfg.privateKey),
@@ -32,6 +36,9 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireAdminSession();
+  if (!auth.ok) return auth.response;
+
   try {
     const body = await req.json();
     const {
@@ -89,7 +96,7 @@ export async function POST(req: NextRequest) {
       const store = getAdminStore();
       store.auditLogs.unshift({
         id: `aud-${Date.now()}`,
-        actorEmail: "ops@reelmux.com",
+        actorEmail: auth.session.actorEmail,
         action: "waffo.auto_provisioned",
         targetType: "system",
         targetId: provisioned.storeId || "waffo",

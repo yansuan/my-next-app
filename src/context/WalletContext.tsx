@@ -45,7 +45,7 @@ export interface UserOrderRecord {
   amountUsd: number;
   creditsGranted: number;
   paymentMethod: string;
-  status: "paid" | "refunded";
+  status: "pending" | "paid" | "refunded";
   createdAt: string;
 }
 
@@ -150,6 +150,11 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [jobs, setJobs] = useState<JobRecord[]>(INITIAL_JOBS);
   const [orders, setOrders] = useState<UserOrderRecord[]>([]);
   const [hydrated, setHydrated] = useState(false);
+  const availableCreditsRef = React.useRef<number>(availableCredits);
+
+  useEffect(() => {
+    availableCreditsRef.current = availableCredits;
+  }, [availableCredits]);
 
   // Hydrate from localStorage on client mount (defaults to signed-out for new visitors)
   useEffect(() => {
@@ -238,6 +243,94 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
             setAvailableCredits(profile.balance_available);
           if (typeof profile.balance_reserved === "number")
             setReservedCredits(profile.balance_reserved);
+          if (profile.plan_tier && profile.plan_tier !== "free") {
+            setActivePlanId(profile.plan_tier);
+            setActivePlanName(profile.plan_tier.replace(/_/g, " "));
+            if (profile.plan_tier.startsWith("pro_")) {
+              setSubscriptionStatus("active");
+            }
+          }
+        }
+
+        const [{ data: dbLedger }, { data: dbJobs }, { data: dbOrders }] =
+          await Promise.all([
+            supabase
+              .from("credit_ledger")
+              .select("id, tx_type, delta_available, delta_reserved, balance_after, note, created_at")
+              .eq("user_id", user.id)
+              .order("created_at", { ascending: false })
+              .limit(30),
+            supabase
+              .from("generation_jobs")
+              .select("id, yir_job_id, tool_slug, model_id, prompt, credits_cost, status, source_output_url, error_message, created_at")
+              .eq("user_id", user.id)
+              .order("created_at", { ascending: false })
+              .limit(30),
+            supabase
+              .from("billing_orders")
+              .select("order_no, item_id, item_name, item_type, amount_cents, credits_granted, payment_method, status, created_at")
+              .eq("user_id", user.id)
+              .order("created_at", { ascending: false })
+              .limit(30),
+          ]);
+
+        if (Array.isArray(dbLedger) && dbLedger.length > 0) {
+          setLedger(
+            dbLedger.map((row) => ({
+              id: String(row.id),
+              timestamp: new Date(row.created_at).toLocaleTimeString(),
+              type:
+                row.tx_type === "credit_pack_purchase"
+                  ? "topup"
+                  : row.tx_type === "subscription_grant"
+                    ? "subscription"
+                    : row.tx_type,
+              deltaAvailable: Number(row.delta_available || 0),
+              deltaReserved: Number(row.delta_reserved || 0),
+              balanceAfter: Number(row.balance_after || 0),
+              note: String(row.note || ""),
+            }))
+          );
+        }
+
+        if (Array.isArray(dbJobs) && dbJobs.length > 0) {
+          setJobs(
+            dbJobs.map((row) => ({
+              id: String(row.id),
+              yirJobId: String(row.yir_job_id || row.id),
+              toolSlug: String(row.tool_slug),
+              modelId: String(row.model_id),
+              modelName: String(row.model_id),
+              prompt: String(row.prompt),
+              settingsSummary: "Synced from cloud ledger",
+              creditsCost: Number(row.credits_cost || 0),
+              status: row.status,
+              outputUrl: row.source_output_url || undefined,
+              errorMessage: row.error_message || undefined,
+              createdAt: new Date(row.created_at).toLocaleString(),
+            }))
+          );
+        }
+
+        if (Array.isArray(dbOrders) && dbOrders.length > 0) {
+          setOrders(
+            dbOrders.map((row) => ({
+              orderNo: String(row.order_no),
+              itemId: String(row.item_id),
+              itemName: String(row.item_name),
+              itemType: row.item_type === "subscription" ? "subscription" : "credit_pack",
+              amountUsd: Number((Number(row.amount_cents || 0) / 100).toFixed(2)),
+              creditsGranted: Number(row.credits_granted || 0),
+              paymentMethod: String(row.payment_method || "Waffo Pancake"),
+              status:
+                row.status === "paid"
+                  ? "paid"
+                  : row.status === "refunded"
+                    ? "refunded"
+                    : "pending",
+              createdAt: new Date(row.created_at).toLocaleString(),
+            }))
+          );
         }
       } catch {
         // Ignore profile lookup errors
@@ -456,7 +549,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         type: "job_settle",
         deltaAvailable: 0,
         deltaReserved: -cost,
-        balanceAfter: availableCredits,
+        balanceAfter: availableCreditsRef.current,
         note,
       },
       ...prev,
@@ -505,87 +598,39 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const completeCheckout = async (
     payload: CheckoutPayload
   ): Promise<{ orderNo: string; waffoCheckoutUrl?: string }> => {
-    const email = userEmail || "creator@reelmux.com";
-    let orderNo = `RMX-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${Math.floor(
-      1000 + Math.random() * 9000
-    )}`;
-    let waffoCheckoutUrl: string | undefined;
+    const res = await fetch("/api/billing/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        itemId: payload.itemId,
+        paymentMethod: payload.paymentMethod,
+      }),
+    });
 
-    try {
-      const res = await fetch("/api/billing/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userEmail: email,
-          itemId: payload.itemId,
-          itemName: payload.itemName,
-          itemType: payload.itemType,
-          amountUsd: payload.amountUsd,
-          creditsGranted: payload.credits,
-          paymentMethod: payload.paymentMethod,
-        }),
-      });
-      const data = await res.json();
-      if (data?.order?.orderNo) {
-        orderNo = data.order.orderNo;
-      }
-      if (data?.waffoCheckoutUrl) {
-        waffoCheckoutUrl = data.waffoCheckoutUrl;
-      }
-    } catch {
-      // Fallback to client orderNo if offline
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data?.error || "Failed to create Waffo checkout session.");
     }
 
-    const nextBalance = availableCredits + payload.credits;
-    setAvailableCredits(nextBalance);
+    const orderNo = String(data?.order?.orderNo || "");
+    const waffoCheckoutUrl =
+      typeof data?.waffoCheckoutUrl === "string"
+        ? data.waffoCheckoutUrl
+        : undefined;
 
-    if (payload.itemType === "subscription") {
-      setActivePlanId(payload.itemId);
-      setActivePlanName(payload.itemName);
-      setSubscriptionStatus("active");
-      const nextDate = new Date();
-      if (payload.itemId.includes("yearly")) {
-        nextDate.setFullYear(nextDate.getFullYear() + 1);
-      } else {
-        nextDate.setMonth(nextDate.getMonth() + 1);
-      }
-      setNextBillingDate(
-        nextDate.toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-        })
-      );
-    }
-
-    const newOrder: UserOrderRecord = {
+    const pendingOrder: UserOrderRecord = {
       orderNo,
-      itemId: payload.itemId,
-      itemName: payload.itemName,
+      itemId: data?.order?.itemId || payload.itemId,
+      itemName: data?.order?.itemName || payload.itemName,
       itemType: payload.itemType,
-      amountUsd: payload.amountUsd,
-      creditsGranted: payload.credits,
+      amountUsd: Number(data?.order?.amountUsd ?? payload.amountUsd),
+      creditsGranted: Number(data?.order?.creditsGranted ?? payload.credits),
       paymentMethod: payload.paymentMethod,
-      status: "paid",
+      status: "pending",
       createdAt: new Date().toLocaleString(),
     };
 
-    setOrders((prev) => [newOrder, ...prev]);
-
-    setLedger((prev) => [
-      {
-        id: `tx_${Date.now()}`,
-        timestamp: new Date().toLocaleTimeString(),
-        type: payload.itemType === "subscription" ? "subscription" : "topup",
-        deltaAvailable: payload.credits,
-        deltaReserved: 0,
-        balanceAfter: nextBalance,
-        note: `${
-          payload.itemType === "subscription" ? "Subscribed to" : "Purchased"
-        } ${payload.itemName} (+${payload.credits.toLocaleString()} credits · Order ${orderNo})`,
-      },
-      ...prev,
-    ]);
+    setOrders((prev) => [pendingOrder, ...prev]);
 
     return { orderNo, waffoCheckoutUrl };
   };
@@ -599,7 +644,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         type: "subscription",
         deltaAvailable: 0,
         deltaReserved: 0,
-        balanceAfter: availableCredits,
+        balanceAfter: availableCreditsRef.current,
         note: `Canceled recurring renewal for ${activePlanName}. Current credits remain active.`,
       },
       ...prev,

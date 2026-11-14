@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, use } from "react";
+import React, { useState, useEffect, useRef, use } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -97,7 +97,21 @@ export default function ToolWorkspacePage({
     refundCredits,
     upsertJob,
     userEmail,
+    isSignedIn,
   } = useWallet();
+
+  const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      if (pollTimerRef.current) {
+        clearTimeout(pollTimerRef.current);
+      }
+    };
+  }, []);
 
   const selectedModel =
     compatibleModels.find((m) => m.id === selectedModelId) ??
@@ -151,23 +165,51 @@ export default function ToolWorkspacePage({
   };
 
   const handleMockUpload = async () => {
-    const res = await fetch("/api/upload", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        filename: `keyframe-${uploadedFiles.length + 1}.png`,
-        contentType: "image/png",
-      }),
-    });
-    const data = await res.json();
-    setUploadedFiles((prev) => [
-      ...prev,
-      data.publicUrl || "/examples/seedance-2-5-train.webp",
-    ]);
+    try {
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          filename: `keyframe-${uploadedFiles.length + 1}.png`,
+          contentType: "image/png",
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setJobState({
+          status: "failed",
+          errorMessage:
+            data?.error || "Please sign in with Google before uploading media.",
+        });
+        return;
+      }
+      if (data.publicUrl) {
+        setUploadedFiles((prev) => [...prev, data.publicUrl]);
+      }
+    } catch {
+      setJobState({
+        status: "failed",
+        errorMessage: "Failed to create upload URL. Please try again.",
+      });
+    }
   };
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
+
+    if (!isSignedIn) {
+      setJobState({
+        status: "failed",
+        errorMessage:
+          "Please sign in with Google to generate and reserve credits.",
+      });
+      return;
+    }
+
+    if (pollTimerRef.current) {
+      clearTimeout(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
 
     const ok = reserveCredits(
       liveCreditsCost,
@@ -199,7 +241,7 @@ export default function ToolWorkspacePage({
           aspectRatio,
           durationSec,
           withAudio,
-          userEmail: userEmail || "creator@reelmux.com",
+          userEmail: userEmail || undefined,
           inputType:
             currentTool.inputType === "dual-frame"
               ? "frames"
@@ -241,75 +283,107 @@ export default function ToolWorkspacePage({
       });
 
       let attempts = 0;
-      const pollInterval = setInterval(async () => {
+      const pollOnce = async () => {
+        if (!isMountedRef.current) return;
         attempts += 1;
-        const pollRes = await fetch(
-          `/api/jobs/${encodeURIComponent(yirJobId)}?model=${encodeURIComponent(selectedModel.id)}`
-        );
-        const pollData = await pollRes.json();
 
-        if (pollData.status === "processing") {
-          setJobState((prev) => ({
-            ...prev,
-            status: "processing",
-            jobId: yirJobId,
-          }));
-        } else if (pollData.status === "succeeded") {
-          clearInterval(pollInterval);
-          settleCredits(
-            liveCreditsCost,
-            `Settled ${liveCreditsCost}c for ${selectedModel.name} job ${yirJobId}`
+        try {
+          const pollRes = await fetch(
+            `/api/jobs/${encodeURIComponent(yirJobId)}?model=${encodeURIComponent(selectedModel.id)}`
           );
-          setJobState({
-            status: "succeeded",
-            jobId: yirJobId,
-            creditsHeld: liveCreditsCost,
-            outputUrl: pollData.output?.media_url,
-            providerRouted: pollData.output?.provider_routed,
-          });
-          upsertJob({
-            id: yirJobId,
-            yirJobId,
-            toolSlug: currentTool.slug,
-            modelId: selectedModel.id,
-            modelName: selectedModel.name,
-            prompt,
-            settingsSummary,
-            creditsCost: liveCreditsCost,
-            status: "succeeded",
-            outputUrl: pollData.output?.media_url,
-            providerRouted: pollData.output?.provider_routed,
-            createdAt: new Date().toLocaleTimeString(),
-          });
-        } else if (pollData.status === "failed" || attempts > 60) {
-          clearInterval(pollInterval);
-          const errMsg =
-            pollData.error?.message ||
-            "Generation failed upstream. 100% of held credits have been automatically refunded.";
-          refundCredits(
-            liveCreditsCost,
-            `Auto-refunded ${liveCreditsCost}c on failed ${selectedModel.name} job`
-          );
-          setJobState({
-            status: "failed",
-            jobId: yirJobId,
-            errorMessage: errMsg,
-          });
-          upsertJob({
-            id: yirJobId,
-            yirJobId,
-            toolSlug: currentTool.slug,
-            modelId: selectedModel.id,
-            modelName: selectedModel.name,
-            prompt,
-            settingsSummary,
-            creditsCost: liveCreditsCost,
-            status: "failed",
-            errorMessage: errMsg,
-            createdAt: new Date().toLocaleTimeString(),
-          });
+          const pollData = await pollRes.json();
+
+          if (!isMountedRef.current) return;
+
+          if (!pollRes.ok) {
+            throw new Error(pollData?.error || `Polling error (${pollRes.status})`);
+          }
+
+          if (pollData.status === "processing") {
+            setJobState((prev) => ({
+              ...prev,
+              status: "processing",
+              jobId: yirJobId,
+            }));
+          } else if (pollData.status === "succeeded") {
+            settleCredits(
+              liveCreditsCost,
+              `Settled ${liveCreditsCost}c for ${selectedModel.name} job ${yirJobId}`
+            );
+            setJobState({
+              status: "succeeded",
+              jobId: yirJobId,
+              creditsHeld: liveCreditsCost,
+              outputUrl: pollData.output?.media_url,
+              providerRouted: pollData.output?.provider_routed,
+            });
+            upsertJob({
+              id: yirJobId,
+              yirJobId,
+              toolSlug: currentTool.slug,
+              modelId: selectedModel.id,
+              modelName: selectedModel.name,
+              prompt,
+              settingsSummary,
+              creditsCost: liveCreditsCost,
+              status: "succeeded",
+              outputUrl: pollData.output?.media_url,
+              providerRouted: pollData.output?.provider_routed,
+              createdAt: new Date().toLocaleTimeString(),
+            });
+            return;
+          } else if (pollData.status === "failed" || attempts >= 60) {
+            const errMsg =
+              pollData.error?.message ||
+              "Generation failed or timed out. 100% of held credits have been automatically refunded.";
+            refundCredits(
+              liveCreditsCost,
+              `Auto-refunded ${liveCreditsCost}c on failed ${selectedModel.name} job`
+            );
+            setJobState({
+              status: "failed",
+              jobId: yirJobId,
+              errorMessage: errMsg,
+            });
+            upsertJob({
+              id: yirJobId,
+              yirJobId,
+              toolSlug: currentTool.slug,
+              modelId: selectedModel.id,
+              modelName: selectedModel.name,
+              prompt,
+              settingsSummary,
+              creditsCost: liveCreditsCost,
+              status: "failed",
+              errorMessage: errMsg,
+              createdAt: new Date().toLocaleTimeString(),
+            });
+            return;
+          }
+        } catch (pollErr: unknown) {
+          if (!isMountedRef.current) return;
+          if (attempts >= 60) {
+            const errMsg =
+              pollErr instanceof Error ? pollErr.message : "Job status polling failed";
+            refundCredits(
+              liveCreditsCost,
+              `Auto-refunded ${liveCreditsCost}c after polling error`
+            );
+            setJobState({
+              status: "failed",
+              jobId: yirJobId,
+              errorMessage: errMsg,
+            });
+            return;
+          }
         }
-      }, 2000);
+
+        if (isMountedRef.current && attempts < 60) {
+          pollTimerRef.current = setTimeout(pollOnce, 2000);
+        }
+      };
+
+      pollTimerRef.current = setTimeout(pollOnce, 2000);
     } catch (e: unknown) {
       refundCredits(
         liveCreditsCost,

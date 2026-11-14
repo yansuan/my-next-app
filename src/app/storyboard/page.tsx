@@ -229,7 +229,21 @@ const CAMERA_MOVES = [
 
 export default function StoryboardDirectorPage() {
   const videoModels = getModelsForTool("text-to-video", "video");
-  const { availableCredits, reserveCredits, settleCredits, upsertJob } = useWallet();
+  const {
+    reserveCredits,
+    settleCredits,
+    refundCredits,
+    upsertJob,
+    isSignedIn,
+  } = useWallet();
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const [selectedPresetId, setSelectedPresetId] = useState<string>(STORY_PRESETS[0].id);
   const [logline, setLogline] = useState<string>(STORY_PRESETS[0].logline);
@@ -297,80 +311,199 @@ export default function StoryboardDirectorPage() {
     setShots((prev) => prev.map((s) => (s.id === shotId ? { ...s, ...patch } : s)));
   };
 
-  const handleRenderSingleShot = (shot: StoryboardShot, idx: number) => {
+  const dispatchShotJob = async (
+    shot: StoryboardShot,
+    cost: number,
+    modelName: string
+  ): Promise<{ ok: boolean; outputUrl?: string; error?: string }> => {
+    const createRes = await fetch("/api/jobs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        toolSlug: "storyboard",
+        modelId: shot.modelId,
+        prompt: `${shot.prompt} (Camera: ${shot.cameraMove})`,
+        resolution: "1080p",
+        aspectRatio: "16:9",
+        durationSec: shot.durationSec,
+        withAudio: true,
+        inputType: "text",
+      }),
+    });
+
+    const created = await createRes.json();
+    if (!createRes.ok) {
+      return { ok: false, error: created?.error || "Dispatch rejected" };
+    }
+
+    const yirJobId = String(created.yirJobId || created.jobId);
+    upsertJob({
+      id: yirJobId,
+      yirJobId,
+      toolSlug: "storyboard",
+      modelId: shot.modelId,
+      modelName,
+      prompt: shot.prompt,
+      settingsSummary: `${shot.durationSec}s · ${shot.cameraMove}`,
+      creditsCost: cost,
+      status: "queued",
+      createdAt: new Date().toLocaleTimeString(),
+    });
+
+    for (let i = 0; i < 60; i++) {
+      await new Promise((r) => setTimeout(r, 2000));
+      if (!isMountedRef.current) return { ok: false, error: "Unmounted" };
+      const pollRes = await fetch(
+        `/api/jobs/${encodeURIComponent(yirJobId)}?model=${encodeURIComponent(shot.modelId)}`
+      );
+      const pollData = await pollRes.json();
+      if (!pollRes.ok) {
+        return { ok: false, error: pollData?.error || "Polling error" };
+      }
+      if (pollData.status === "succeeded") {
+        const finalUrl = pollData.output?.media_url || shot.videoUrl;
+        upsertJob({
+          id: yirJobId,
+          yirJobId,
+          toolSlug: "storyboard",
+          modelId: shot.modelId,
+          modelName,
+          prompt: shot.prompt,
+          settingsSummary: `${shot.durationSec}s · ${shot.cameraMove}`,
+          creditsCost: cost,
+          status: "succeeded",
+          outputUrl: finalUrl,
+          createdAt: new Date().toLocaleTimeString(),
+        });
+        return { ok: true, outputUrl: finalUrl };
+      }
+      if (pollData.status === "failed" || pollData.status === "canceled") {
+        return {
+          ok: false,
+          error: pollData.error?.message || "Upstream shot render failed",
+        };
+      }
+    }
+
+    return { ok: false, error: "Render polling timed out" };
+  };
+
+  const handleRenderSingleShot = async (shot: StoryboardShot, idx: number) => {
+    if (!isSignedIn) {
+      setBannerNotice("Please sign in with Google to render shots.");
+      return;
+    }
+
     const modelObj = videoModels.find((m) => m.id === shot.modelId) || videoModels[0];
     const cost = modelObj?.baseCredits || 18;
-    if (availableCredits < cost) {
+    if (!reserveCredits(cost, `Hold ${cost}c for Storyboard Shot #0${shot.shotNumber}`)) {
       setBannerNotice(`Insufficient credits (${cost}c needed). Top up via Waffo Pancake.`);
       return;
     }
 
     updateShot(shot.id, { status: "rendering" });
-    reserveCredits(cost, `Hold ${cost}c for Storyboard Shot #0${shot.shotNumber}`);
-    setTimeout(() => {
-      const jobId = `sb_${Date.now()}_${shot.shotNumber}`;
-      settleCredits(cost, `Storyboard Shot #0${shot.shotNumber} (${modelObj?.name || shot.modelId})`);
-      upsertJob({
-        id: jobId,
-        yirJobId: jobId,
-        toolSlug: "storyboard",
-        modelId: shot.modelId,
-        modelName: modelObj?.name || shot.modelId,
-        prompt: shot.prompt,
-        settingsSummary: `${shot.durationSec}s · ${shot.cameraMove}`,
-        creditsCost: cost,
-        status: "succeeded",
-        createdAt: "Just now",
-        outputUrl: shot.videoUrl,
-      });
-      updateShot(shot.id, { status: "ready" });
-      setActiveShotIndex(idx);
-      setBannerNotice(
-        `Rendered Shot #0${shot.shotNumber} with ${modelObj?.name} (-${cost} credits).`
+    try {
+      const result = await dispatchShotJob(
+        shot,
+        cost,
+        modelObj?.name || shot.modelId
       );
-      setTimeout(() => setBannerNotice(null), 4000);
-    }, 900);
+      if (!isMountedRef.current) return;
+
+      if (result.ok) {
+        settleCredits(
+          cost,
+          `Storyboard Shot #0${shot.shotNumber} (${modelObj?.name || shot.modelId})`
+        );
+        updateShot(shot.id, {
+          status: "ready",
+          ...(result.outputUrl ? { videoUrl: result.outputUrl } : {}),
+        });
+        setActiveShotIndex(idx);
+        setBannerNotice(
+          `Rendered Shot #0${shot.shotNumber} with ${modelObj?.name} (-${cost} credits).`
+        );
+      } else {
+        refundCredits(
+          cost,
+          `Auto-refunded ${cost}c for failed Shot #0${shot.shotNumber}`
+        );
+        updateShot(shot.id, { status: "ready" });
+        setBannerNotice(
+          `Shot #0${shot.shotNumber} failed (${result.error}) — ${cost}c refunded.`
+        );
+      }
+    } catch {
+      if (!isMountedRef.current) return;
+      refundCredits(cost, `Auto-refunded ${cost}c due to network error`);
+      updateShot(shot.id, { status: "ready" });
+      setBannerNotice(`Shot #0${shot.shotNumber} network error — ${cost}c refunded.`);
+    }
+    setTimeout(() => isMountedRef.current && setBannerNotice(null), 4500);
   };
 
-  const handleRenderMasterSequence = () => {
-    if (availableCredits < totalCredits) {
+  const handleRenderMasterSequence = async () => {
+    if (!isSignedIn) {
+      setBannerNotice("Please sign in with Google to render the master sequence.");
+      return;
+    }
+    if (!reserveCredits(totalCredits, `Hold ${totalCredits}c for 4-Shot Master Storyboard`)) {
       setBannerNotice(
         `Insufficient balance (${totalCredits}c required). Please top up via Waffo Pancake.`
       );
       return;
     }
     setRenderingAll(true);
-    reserveCredits(totalCredits, `Hold ${totalCredits}c for 4-Shot Master Storyboard`);
     setShots((prev) => prev.map((s) => ({ ...s, status: "rendering" })));
 
-    setTimeout(() => {
-      const jobId = `sb_master_${Date.now()}`;
-      settleCredits(
-        totalCredits,
-        `4-Shot Multi-Model Master Sequence (${shots.length} reels + audio)`
+    try {
+      const outcomes = await Promise.all(
+        shots.map((s) => {
+          const m = videoModels.find((vm) => vm.id === s.modelId) || videoModels[0];
+          return dispatchShotJob(s, m?.baseCredits || 18, m?.name || s.modelId);
+        })
       );
-      upsertJob({
-        id: jobId,
-        yirJobId: jobId,
-        toolSlug: "storyboard",
-        modelId: shots.map((s) => s.modelId).join("+"),
-        modelName: "Multi-Model Multiplexer (4 Shots)",
-        prompt: logline,
-        settingsSummary: "20s · 4 Shots · 1080p · Suno v6 Stem",
-        creditsCost: totalCredits,
-        status: "succeeded",
-        createdAt: "Just now",
-        outputUrl: shots[0].videoUrl,
-      });
+      if (!isMountedRef.current) return;
+
+      const anyFailed = outcomes.some((o) => !o.ok);
+      if (anyFailed) {
+        refundCredits(
+          totalCredits,
+          `Auto-refunded ${totalCredits}c: one or more sequence shots failed`
+        );
+        setShots((prev) => prev.map((s) => ({ ...s, status: "ready" })));
+        setBannerNotice(
+          `Sequence render incomplete — ${totalCredits} credits refunded.`
+        );
+      } else {
+        settleCredits(
+          totalCredits,
+          `4-Shot Multi-Model Master Sequence (${shots.length} reels + audio)`
+        );
+        setShots((prev) =>
+          prev.map((s, i) => ({
+            ...s,
+            status: "ready",
+            videoUrl: outcomes[i].outputUrl || s.videoUrl,
+          }))
+        );
+        setActiveShotIndex(0);
+        setIsSequencePlaying(true);
+        setBannerNotice(
+          `Master 4-Shot Sequence rendered! (-${totalCredits} credits held & settled)`
+        );
+      }
+    } catch {
+      if (!isMountedRef.current) return;
+      refundCredits(totalCredits, `Auto-refunded ${totalCredits}c on sequence error`);
       setShots((prev) => prev.map((s) => ({ ...s, status: "ready" })));
-      setRenderingAll(false);
-      setActiveShotIndex(0);
-      setIsSequencePlaying(true);
-      setBannerNotice(
-        `Master 4-Shot Sequence rendered & stitched! (-${totalCredits} credits held & settled)`
-      );
-      setTimeout(() => setBannerNotice(null), 4500);
-    }, 1200);
+      setBannerNotice(`Sequence render error — ${totalCredits}c refunded.`);
+    } finally {
+      if (isMountedRef.current) {
+        setRenderingAll(false);
+        setTimeout(() => isMountedRef.current && setBannerNotice(null), 4500);
+      }
+    }
   };
 
   return (

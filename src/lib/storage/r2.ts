@@ -35,8 +35,9 @@ export async function createR2PresignedUploadUrl(params: {
   contentType: string;
   userId?: string;
 }): Promise<{ uploadUrl: string; publicUrl: string; key: string; simulated: boolean }> {
-  const safeName = params.filename.replace(/[^a-zA-Z0-9._-]/g, "_");
-  const key = `uploads/${params.userId || "anon"}/${Date.now()}-${safeName}`;
+  const safeName = params.filename.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 120);
+  const safeUser = (params.userId || "anon").replace(/[^a-zA-Z0-9_-]/g, "_");
+  const key = `uploads/${safeUser}/${Date.now()}-${safeName}`;
 
   if (!isR2Configured()) {
     return {

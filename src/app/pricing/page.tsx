@@ -52,6 +52,7 @@ export default function PricingPage() {
   const [cardHolder, setCardHolder] = useState<string>("ReelMux Studio Creator");
   const [openExternalBrowser, setOpenExternalBrowser] = useState<boolean>(true);
   const [processing, setProcessing] = useState<boolean>(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<{
     orderNo: string;
     itemName: string;
@@ -62,6 +63,7 @@ export default function PricingPage() {
   } | null>(null);
 
   const openPackCheckout = (pack: (typeof CREDIT_PACKS)[number]) => {
+    setCheckoutError(null);
     const numericPrice = Number(pack.priceUsd.replace(/[^0-9.]/g, "")) || 29;
     setCheckoutTarget({
       itemId: pack.id,
@@ -75,6 +77,7 @@ export default function PricingPage() {
   };
 
   const openSubCheckout = (plan: (typeof SUBSCRIPTION_PLANS)[number]) => {
+    setCheckoutError(null);
     const numericPrice = Number(plan.priceUsd.replace(/[^0-9.]/g, "")) || 19.9;
     setCheckoutTarget({
       itemId: plan.id,
@@ -91,6 +94,7 @@ export default function PricingPage() {
     e.preventDefault();
     if (!checkoutTarget) return;
     setProcessing(true);
+    setCheckoutError(null);
     try {
       const result = await completeCheckout({
         itemId: checkoutTarget.itemId,
@@ -120,6 +124,12 @@ export default function PricingPage() {
         waffoCheckoutUrl: checkoutUrl,
       });
       setCheckoutTarget(null);
+    } catch (err: unknown) {
+      setCheckoutError(
+        err instanceof Error
+          ? err.message
+          : "Unable to create checkout session."
+      );
     } finally {
       setProcessing(false);
     }
@@ -206,14 +216,13 @@ export default function PricingPage() {
             </div>
             <div>
               <div className="font-bold text-white text-base">
-                Waffo Pancake Order Created · #{receipt.orderNo}
+                Waffo Checkout Session Created · #{receipt.orderNo}
               </div>
               <p className="mt-0.5 text-xs text-emerald-200">
-                {receipt.itemType === "subscription"
-                  ? `Your ${receipt.itemName} subscription is now active.`
-                  : `Your ${receipt.itemName} has been credited.`}{" "}
-                Added <strong>+{receipt.credits.toLocaleString()} credits</strong> ($
-                {receipt.amountUsd.toFixed(2)} USD). New balance:{" "}
+                Complete payment for <strong>{receipt.itemName}</strong> ($
+                {receipt.amountUsd.toFixed(2)} USD) in the Waffo Pancake Cashier.
+                <strong> +{receipt.credits.toLocaleString()} credits</strong> will be
+                credited automatically once webhook confirmation arrives. Current balance:{" "}
                 <strong>{availableCredits.toLocaleString()} credits</strong>.
               </p>
             </div>
@@ -508,6 +517,19 @@ export default function PricingPage() {
             </div>
 
             <form onSubmit={handleConfirmPayment} className="mt-5 space-y-4">
+              {checkoutError && (
+                <div className="rounded-xl border border-rose-400/35 bg-rose-500/10 p-3 text-xs text-rose-200">
+                  <p>{checkoutError}</p>
+                  {checkoutError.toLowerCase().includes("sign in") && (
+                    <Link
+                      href="/auth?next=/pricing"
+                      className="mt-1.5 inline-block font-bold text-[#D4FF00] underline"
+                    >
+                      Sign in with Google →
+                    </Link>
+                  )}
+                </div>
+              )}
               <div>
                 <label className="block text-xs font-semibold text-zinc-300 mb-2">
                   Preferred Payment Channel on Waffo Pancake

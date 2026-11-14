@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import "./globals.css";
 import { WalletProvider } from "@/context/WalletContext";
 import { AppShell } from "@/components/layout/AppShell";
@@ -152,6 +153,17 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen bg-[#06070A] text-zinc-100 antialiased selection:bg-[#D4FF00] selection:text-black">
+        <Script
+          src="https://www.googletagmanager.com/gtm.js?id=GTM-PDHCRWCF"
+          strategy="afterInteractive"
+        />
+        <Script id="google-gtm-init" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+          `}
+        </Script>
         <WalletProvider>
           <AppShell>{children}</AppShell>
         </WalletProvider>
