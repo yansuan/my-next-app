@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { MODELS_CATALOG, calculateJobCredits } from "@/lib/catalog/models";
 import { createYirJob } from "@/lib/yir/client";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
+import { getAdminStore } from "@/lib/admin/store";
 
 export async function POST(req: NextRequest) {
   try {
@@ -20,6 +21,7 @@ export async function POST(req: NextRequest) {
       lastFrameUrl,
       referenceUrls,
       userId,
+      userEmail = "creator@reelmux.com",
     } = body;
 
     if (!prompt || typeof prompt !== "string" || !prompt.trim()) {
@@ -84,6 +86,29 @@ export async function POST(req: NextRequest) {
         with_audio: withAudio,
         n: 1,
       },
+    });
+
+    // Also record in Admin Console live store
+    const store = getAdminStore();
+    store.generations.unshift({
+      id: `gen-${Math.floor(1000 + Math.random() * 9000)}`,
+      upstreamJobId: yirJob.id,
+      userEmail: String(userEmail),
+      toolSlug,
+      category: modelSpec.category,
+      modelId: modelSpec.id,
+      modelName: modelSpec.name,
+      prompt: prompt.trim(),
+      resolution: `${resolution} · ${aspectRatio}`,
+      durationSec: modelSpec.category === "video" ? durationSec : undefined,
+      creditsCost,
+      status: "succeeded",
+      outputUrl:
+        modelSpec.category === "video"
+          ? modelSpec.previewVideo || "/examples/seedance-2-5-train.mp4"
+          : modelSpec.previewPoster || "/examples/gpt-image-2-6-poster.webp",
+      latencySec: 18.4,
+      createdAt: new Date().toISOString().replace("T", " ").slice(0, 16) + " UTC",
     });
 
     return NextResponse.json({

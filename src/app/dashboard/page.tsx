@@ -2,18 +2,37 @@
 
 import React from "react";
 import Link from "next/link";
-import { Terminal, Zap, ArrowRight, Sparkles, ShieldAlert } from "lucide-react";
+import {
+  Terminal,
+  Zap,
+  ArrowRight,
+  Sparkles,
+  ShieldAlert,
+  CreditCard,
+  CheckCircle2,
+} from "lucide-react";
 import { useWallet } from "@/context/WalletContext";
 
 export default function DashboardPage() {
-  const { availableCredits, reservedCredits, ledger, jobs, userEmail } = useWallet();
+  const {
+    availableCredits,
+    reservedCredits,
+    activePlanName,
+    subscriptionStatus,
+    nextBillingDate,
+    cancelSubscription,
+    ledger,
+    jobs,
+    orders,
+    userEmail,
+  } = useWallet();
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 space-y-10">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-extrabold text-white">Workspace &amp; Credit Ledger</h1>
-          <p className="mt-1 text-sm text-zinc-400">{userEmail ?? "Not signed in"}</p>
+          <p className="mt-1 text-sm text-zinc-400">{userEmail ?? "creator@reelmux.com"}</p>
         </div>
         <div className="flex flex-wrap gap-2.5">
           <Link
@@ -40,21 +59,65 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      {/* Top 4 Summary Cards */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-2xl border border-[#D4FF00]/30 bg-[#D4FF00]/5 p-6">
           <div className="text-xs uppercase text-zinc-400">Available credits</div>
-          <div className="mt-1 text-4xl font-extrabold text-[#D4FF00]">{availableCredits}</div>
+          <div className="mt-1 text-4xl font-extrabold text-[#D4FF00]">
+            {availableCredits.toLocaleString()}
+          </div>
           <div className="mt-2 text-xs text-zinc-400">Ready to spend on all 73+ AI models</div>
         </div>
+
         <div className="rounded-2xl border border-white/10 bg-[#0C0E14] p-6">
           <div className="text-xs uppercase text-zinc-400">Held in escrow</div>
           <div className="mt-1 text-4xl font-extrabold text-white">{reservedCredits}</div>
           <div className="mt-2 text-xs text-zinc-500">Auto-refunded if a job fails</div>
         </div>
+
+        <div className="rounded-2xl border border-white/10 bg-[#0C0E14] p-6 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between text-xs uppercase text-zinc-400">
+              <span>Subscription Plan</span>
+              <span
+                className={`rounded-full px-2 py-0.5 text-[10px] font-bold capitalize ${
+                  subscriptionStatus === "active"
+                    ? "bg-emerald-500/20 text-emerald-300"
+                    : "bg-white/10 text-zinc-300"
+                }`}
+              >
+                {subscriptionStatus === "active" ? "Active" : "Pay-as-you-go"}
+              </span>
+            </div>
+            <div className="mt-1.5 text-lg font-extrabold text-white">{activePlanName}</div>
+            {subscriptionStatus === "active" && nextBillingDate && (
+              <div className="mt-1 text-xs text-zinc-400">Renews on {nextBillingDate}</div>
+            )}
+          </div>
+          <div className="mt-3 flex items-center justify-between">
+            <Link
+              href="/pricing"
+              className="inline-flex items-center gap-1 text-xs font-bold text-[#D4FF00] hover:underline"
+            >
+              {subscriptionStatus === "active" ? "Manage Plan" : "Upgrade to Pro"}
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+            {subscriptionStatus === "active" && (
+              <button
+                type="button"
+                onClick={cancelSubscription}
+                className="text-[11px] text-rose-400 hover:underline cursor-pointer"
+              >
+                Cancel renewal
+              </button>
+            )}
+          </div>
+        </div>
+
         <div className="rounded-2xl border border-white/10 bg-[#0C0E14] p-6 flex flex-col justify-between">
           <div>
             <div className="text-xs uppercase text-zinc-400">MCP Endpoint</div>
-            <div className="mt-1 font-mono text-sm font-bold text-white">
+            <div className="mt-1 font-mono text-xs sm:text-sm font-bold text-white break-all">
               https://reelmux.com/api/mcp
             </div>
           </div>
@@ -68,6 +131,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Recent Generations */}
       <div>
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-bold text-white">Recent Generations</h2>
@@ -86,29 +150,99 @@ export default function DashboardPage() {
           </p>
         ) : (
           <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {jobs.map((j) => (
-              <div key={j.id} className="rounded-2xl border border-white/10 bg-[#0C0E14] p-4">
-                <div className="flex justify-between text-xs">
-                  <span className="font-semibold text-white">{j.modelName}</span>
-                  <span className="capitalize text-[#D4FF00]">{j.status}</span>
+            {jobs.map((j) => {
+              const isVideo =
+                j.outputUrl?.endsWith(".mp4") ||
+                j.toolSlug.includes("video") ||
+                j.toolSlug === "motion-control";
+              return (
+                <div key={j.id} className="rounded-2xl border border-white/10 bg-[#0C0E14] p-4">
+                  <div className="flex justify-between text-xs">
+                    <span className="font-semibold text-white">{j.modelName}</span>
+                    <span className="capitalize text-[#D4FF00] font-semibold">{j.status}</span>
+                  </div>
+                  {j.outputUrl &&
+                    (isVideo ? (
+                      <video
+                        src={j.outputUrl}
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
+                        controls
+                        className="mt-3 aspect-video w-full rounded-lg object-cover bg-black"
+                      />
+                    ) : (
+                      <img
+                        src={j.outputUrl}
+                        alt={j.modelName}
+                        className="mt-3 aspect-video w-full rounded-lg object-cover bg-black"
+                      />
+                    ))}
+                  <p className="mt-2.5 line-clamp-2 text-xs text-zinc-300">{j.prompt}</p>
+                  <div className="mt-2 flex items-center justify-between text-[11px] text-zinc-500">
+                    <span>{j.settingsSummary}</span>
+                    <span className="font-bold text-[#D4FF00]">{j.creditsCost} credits</span>
+                  </div>
                 </div>
-                {j.outputUrl && (
-                  <img
-                    src={j.outputUrl}
-                    alt=""
-                    className="mt-3 aspect-video w-full rounded-lg object-cover"
-                  />
-                )}
-                <p className="mt-2 line-clamp-2 text-xs text-zinc-400">{j.prompt}</p>
-                <div className="mt-2 text-[11px] text-zinc-500">
-                  {j.settingsSummary} · {j.creditsCost} credits
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
 
+      {/* Billing Orders & Subscriptions History */}
+      {orders.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold text-white">Billing Orders &amp; Subscriptions</h2>
+            <Link
+              href="/admin/orders"
+              className="text-xs font-semibold text-zinc-400 hover:text-[#D4FF00]"
+            >
+              Inspect in Admin Orders →
+            </Link>
+          </div>
+          <div className="mt-4 overflow-x-auto rounded-2xl border border-white/10 bg-[#0C0E14]">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-white/[0.04] text-xs uppercase text-zinc-400">
+                <tr>
+                  <th className="px-4 py-3">Order #</th>
+                  <th className="px-4 py-3">Plan / Pack</th>
+                  <th className="px-4 py-3">Credits Added</th>
+                  <th className="px-4 py-3">Amount</th>
+                  <th className="px-4 py-3">Payment Method</th>
+                  <th className="px-4 py-3">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {orders.map((ord) => (
+                  <tr key={ord.orderNo} className="border-t border-white/5 text-zinc-300">
+                    <td className="px-4 py-2.5 font-mono text-xs text-white">{ord.orderNo}</td>
+                    <td className="px-4 py-2.5 font-semibold text-white">{ord.itemName}</td>
+                    <td className="px-4 py-2.5 font-bold text-[#D4FF00]">
+                      +{ord.creditsGranted.toLocaleString()}c
+                    </td>
+                    <td className="px-4 py-2.5">${ord.amountUsd.toFixed(2)}</td>
+                    <td className="px-4 py-2.5 text-xs text-zinc-400">
+                      <CreditCard className="mr-1.5 inline h-3.5 w-3.5 text-zinc-400" />
+                      {ord.paymentMethod}
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-xs font-bold text-emerald-300">
+                        <CheckCircle2 className="h-3 w-3" />
+                        {ord.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Credit Ledger */}
       <div>
         <h2 className="text-xl font-bold text-white">Credit Ledger</h2>
         <div className="mt-4 overflow-x-auto rounded-2xl border border-white/10 bg-[#0C0E14]">
@@ -125,7 +259,7 @@ export default function DashboardPage() {
             <tbody>
               {ledger.map((t) => (
                 <tr key={t.id} className="border-t border-white/5 text-zinc-300">
-                  <td className="px-4 py-2.5">{t.timestamp}</td>
+                  <td className="px-4 py-2.5 text-xs text-zinc-400">{t.timestamp}</td>
                   <td className="px-4 py-2.5 font-mono text-xs">{t.type}</td>
                   <td className="px-4 py-2.5 font-semibold text-white">
                     {t.deltaAvailable > 0 ? `+${t.deltaAvailable}` : t.deltaAvailable}

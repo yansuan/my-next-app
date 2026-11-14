@@ -7,8 +7,6 @@ import {
   ArrowRight,
   Volume2,
   CheckCircle2,
-  SlidersHorizontal,
-  Zap,
   HelpCircle,
 } from "lucide-react";
 import {
@@ -47,11 +45,12 @@ export default function ModelDetailPage({
   });
 
   const targetToolSlug =
-    model.category === "image"
+    model.supportedTools?.[0] ||
+    (model.category === "image"
       ? "text-to-image"
       : model.category === "audio"
         ? "ai-music"
-        : "text-to-video";
+        : "text-to-video");
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 space-y-14">
@@ -80,13 +79,16 @@ export default function ModelDetailPage({
               )}
             </div>
             <p className="mt-2 text-base text-zinc-300">
-              By <strong className="text-white">{model.provider}</strong> · {model.tagline}
+              By <strong className="text-white">{model.provider}</strong> ·{" "}
+              {model.tagline}
             </p>
           </div>
 
           <div className="flex items-center gap-3">
             <div className="rounded-xl border border-white/10 bg-[#0C0E14] px-4 py-2.5 text-right">
-              <div className="text-[11px] uppercase text-zinc-400">Starting Price</div>
+              <div className="text-[11px] uppercase text-zinc-400">
+                Starting Price
+              </div>
               <div className="text-lg font-extrabold text-[#D4FF00]">
                 From {model.baseCredits} credits
               </div>
@@ -106,8 +108,35 @@ export default function ModelDetailPage({
 
       {/* Interactive Inline Quick Generator & Spec Breakdown */}
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
-        {/* Left 7 Cols: Inline Quick Configurator */}
+        {/* Left 7 Cols: Live Media Showcase + Inline Quick Configurator */}
         <div className="lg:col-span-7 rounded-2xl border border-white/10 bg-[#0C0E14] p-6 space-y-5">
+          {(model.previewVideo || model.previewPoster) && (
+            <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-white/10 bg-black">
+              {model.previewVideo ? (
+                <video
+                  key={model.previewVideo}
+                  src={model.previewVideo}
+                  poster={model.previewPoster}
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  controls
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <img
+                  src={model.previewPoster}
+                  alt={model.name}
+                  className="h-full w-full object-cover"
+                />
+              )}
+              <span className="pointer-events-none absolute top-3 left-3 rounded-md bg-black/75 px-2.5 py-1 text-xs font-bold text-[#D4FF00] backdrop-blur-md">
+                {model.name} Reference Output
+              </span>
+            </div>
+          )}
+
           <div className="flex items-center justify-between border-b border-white/10 pb-4">
             <span className="text-sm font-bold text-white">
               Try {model.name} Inline Estimator &amp; Launcher
@@ -131,7 +160,9 @@ export default function ModelDetailPage({
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs text-zinc-400 mb-1">Resolution</label>
+              <label className="block text-xs text-zinc-400 mb-1">
+                Resolution
+              </label>
               <select
                 value={resolution}
                 onChange={(e) => setResolution(e.target.value)}
@@ -145,7 +176,9 @@ export default function ModelDetailPage({
               </select>
             </div>
             <div>
-              <label className="block text-xs text-zinc-400 mb-1">Aspect Ratio</label>
+              <label className="block text-xs text-zinc-400 mb-1">
+                Aspect Ratio
+              </label>
               <select
                 value={aspectRatio}
                 onChange={(e) => setAspectRatio(e.target.value)}
@@ -160,7 +193,9 @@ export default function ModelDetailPage({
             </div>
             {model.category === "video" && (
               <div>
-                <label className="block text-xs text-zinc-400 mb-1">Duration</label>
+                <label className="block text-xs text-zinc-400 mb-1">
+                  Duration
+                </label>
                 <select
                   value={durationSec}
                   onChange={(e) => setDurationSec(Number(e.target.value))}
@@ -213,24 +248,34 @@ export default function ModelDetailPage({
             </div>
             <div className="flex justify-between py-2.5">
               <dt className="text-zinc-400">Category</dt>
-              <dd className="font-semibold capitalize text-white">{model.category}</dd>
+              <dd className="font-semibold capitalize text-white">
+                {model.category}
+              </dd>
             </div>
             <div className="flex justify-between py-2.5">
               <dt className="text-zinc-400">Speed Tier</dt>
-              <dd className="font-semibold text-[#D4FF00]">{model.speedRating}</dd>
+              <dd className="font-semibold text-[#D4FF00]">
+                {model.speedRating}
+              </dd>
             </div>
             <div className="flex justify-between py-2.5">
               <dt className="text-zinc-400">Resolutions</dt>
-              <dd className="font-semibold text-white">{model.resolutions.join(", ")}</dd>
+              <dd className="font-semibold text-white">
+                {model.resolutions.join(", ")}
+              </dd>
             </div>
             <div className="flex justify-between py-2.5">
               <dt className="text-zinc-400">Aspect Ratios</dt>
-              <dd className="font-semibold text-white">{model.aspectRatios.join(", ")}</dd>
+              <dd className="font-semibold text-white">
+                {model.aspectRatios.join(", ")}
+              </dd>
             </div>
             {model.maxDurationSec && (
               <div className="flex justify-between py-2.5">
                 <dt className="text-zinc-400">Max Clip Length</dt>
-                <dd className="font-semibold text-white">Up to {model.maxDurationSec}s</dd>
+                <dd className="font-semibold text-white">
+                  Up to {model.maxDurationSec}s
+                </dd>
               </div>
             )}
             <div className="flex justify-between py-2.5">
@@ -257,6 +302,26 @@ export default function ModelDetailPage({
               ))}
             </div>
           </div>
+
+          {model.supportedTools && model.supportedTools.length > 0 && (
+            <div className="pt-2">
+              <div className="text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-2">
+                Compatible Studio Tools
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {model.supportedTools.map((tSlug) => (
+                  <Link
+                    key={tSlug}
+                    href={`/tools/${tSlug}?model=${model.id}`}
+                    className="inline-flex items-center gap-1 rounded-lg border border-[#D4FF00]/30 bg-[#D4FF00]/10 px-2.5 py-1 text-xs font-semibold text-[#D4FF00] hover:bg-[#D4FF00] hover:text-black transition-colors"
+                  >
+                    {tSlug}
+                    <ArrowRight className="h-3 w-3" />
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -295,10 +360,15 @@ export default function ModelDetailPage({
               {[model, ...peerModels].map((m, idx) => (
                 <tr key={m.id} className={idx === 0 ? "bg-[#D4FF00]/5" : ""}>
                   <td className="py-3 pr-4 font-bold text-white">
-                    {m.name} {idx === 0 && <span className="text-xs text-[#D4FF00]">(Current)</span>}
+                    {m.name}{" "}
+                    {idx === 0 && (
+                      <span className="text-xs text-[#D4FF00]">(Current)</span>
+                    )}
                   </td>
                   <td className="py-3 px-4 text-zinc-300">{m.provider}</td>
-                  <td className="py-3 px-4 text-zinc-300">{m.resolutions.join(", ")}</td>
+                  <td className="py-3 px-4 text-zinc-300">
+                    {m.resolutions.join(", ")}
+                  </td>
                   <td className="py-3 px-4 text-zinc-300">
                     {m.supportsNativeAudio ? "Yes" : "No"}
                   </td>
@@ -328,9 +398,10 @@ export default function ModelDetailPage({
             How much does {model.name} cost on ReelMux?
           </div>
           <p className="mt-2 text-xs text-zinc-400 leading-relaxed">
-            {model.name} starts at {model.baseCredits} credits ({model.unitLabel}). Exact credit
-            costs adjust dynamically based on your chosen resolution and duration, and are always
-            displayed before you click generate.
+            {model.name} starts at {model.baseCredits} credits ({model.unitLabel}
+            ). Exact credit costs adjust dynamically based on your chosen
+            resolution and duration, and are always displayed before you click
+            generate.
           </p>
         </div>
         <div className="rounded-2xl border border-white/10 bg-[#0C0E14] p-5">
@@ -339,9 +410,9 @@ export default function ModelDetailPage({
             What happens if a {model.name} generation fails?
           </div>
           <p className="mt-2 text-xs text-zinc-400 leading-relaxed">
-            Credits are held in escrow while your generation runs. If {model.name} times out or
-            errors for any reason, 100% of your reserved credits are automatically returned to your
-            balance.
+            Credits are held in escrow while your generation runs. If{" "}
+            {model.name} times out or errors for any reason, 100% of your
+            reserved credits are automatically returned to your balance.
           </p>
         </div>
       </div>

@@ -329,8 +329,10 @@ export async function getYirJobStatus(
 
   const sampleMediaUrl =
     spec.category === "image"
-      ? "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1400&q=85"
-      : "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1400&q=85";
+      ? spec.previewPoster || "/examples/gpt-image-2-6-poster.webp"
+      : spec.previewVideo || "/examples/seedance-2-5-train.mp4";
+  const sampleThumbUrl =
+    spec.previewPoster || "/examples/seedance-2-5-train.webp";
 
   return {
     id: jobId,
@@ -340,7 +342,7 @@ export async function getYirJobStatus(
     created_at: Math.floor(createdMs / 1000),
     output: {
       media_url: sampleMediaUrl,
-      thumbnail_url: sampleMediaUrl,
+      thumbnail_url: sampleThumbUrl,
       duration_sec: spec.category === "video" ? 5 : undefined,
       provider_routed: spec.provider,
     },

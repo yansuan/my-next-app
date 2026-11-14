@@ -497,8 +497,7 @@ const INITIAL_GENERATIONS: AdminGenerationRecord[] = [
     durationSec: 10,
     creditsCost: 82,
     status: "succeeded",
-    outputUrl:
-      "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=1200&q=85",
+    outputUrl: "/examples/kling-4-chase.mp4",
     latencySec: 38.4,
     createdAt: "2026-11-14 08:58 UTC",
   },
@@ -516,8 +515,7 @@ const INITIAL_GENERATIONS: AdminGenerationRecord[] = [
     durationSec: 5,
     creditsCost: 143,
     status: "succeeded",
-    outputUrl:
-      "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1200&q=85",
+    outputUrl: "/examples/seedance-2-5-train.mp4",
     latencySec: 29.1,
     createdAt: "2026-11-14 08:45 UTC",
   },
@@ -551,8 +549,7 @@ const INITIAL_GENERATIONS: AdminGenerationRecord[] = [
     resolution: "2K · 4:5",
     creditsCost: 18,
     status: "succeeded",
-    outputUrl:
-      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&q=85",
+    outputUrl: "/examples/flux-2-max-portrait.webp",
     latencySec: 6.2,
     createdAt: "2026-11-14 05:14 UTC",
   },

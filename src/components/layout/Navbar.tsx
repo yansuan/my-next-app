@@ -359,11 +359,23 @@ export function Navbar() {
                           className="group relative flex overflow-hidden rounded-xl border border-white/10 bg-white/[0.02] p-3 hover:border-[#D4FF00]/50 hover:bg-white/[0.05] transition-all"
                         >
                           <div className="relative h-20 w-28 shrink-0 overflow-hidden rounded-lg bg-zinc-900">
-                            <img
-                              src={tool.previewImage}
-                              alt={tool.name}
-                              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                            />
+                            {tool.previewVideo ? (
+                              <video
+                                src={tool.previewVideo}
+                                poster={tool.previewImage}
+                                autoPlay
+                                loop
+                                muted
+                                playsInline
+                                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                              />
+                            ) : (
+                              <img
+                                src={tool.previewImage}
+                                alt={tool.name}
+                                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                              />
+                            )}
                             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
                             <span className="absolute bottom-1 left-1.5 rounded bg-black/75 px-1.5 py-0.5 text-[10px] font-medium text-[#D4FF00]">
                               From {tool.fromCredits}c
