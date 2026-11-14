@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { Terminal, Zap, ArrowRight, Sparkles } from "lucide-react";
+import { Terminal, Zap, ArrowRight, Sparkles, ShieldAlert } from "lucide-react";
 import { useWallet } from "@/context/WalletContext";
 
 export default function DashboardPage() {
@@ -16,6 +16,13 @@ export default function DashboardPage() {
           <p className="mt-1 text-sm text-zinc-400">{userEmail ?? "Not signed in"}</p>
         </div>
         <div className="flex flex-wrap gap-2.5">
+          <Link
+            href="/admin/signup-abuse"
+            className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-4 py-2.5 text-xs font-semibold text-zinc-200 hover:bg-white/10"
+          >
+            <ShieldAlert className="h-4 w-4 text-[#D4FF00]" />
+            Admin Console
+          </Link>
           <Link
             href="/for-agents"
             className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-4 py-2.5 text-xs font-semibold text-white hover:bg-white/10"

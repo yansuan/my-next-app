@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { TOOLS_CATALOG, MODELS_CATALOG, BadgeType } from "@/lib/catalog/models";
 import { useWallet } from "@/context/WalletContext";
+import { BrandLogo } from "@/components/brand/BrandLogo";
 
 type MegaMenuKey = "video" | "image" | "audio" | "models" | null;
 
@@ -135,45 +136,9 @@ export function Navbar() {
           aria-label="Global"
           className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8"
         >
-          {/* A. Left Brand Logo (Overlapping Dual Rounded Squares SVG + ReelMux) */}
+          {/* A. Left Brand Logo (ReelMux Emblem + Wordmark) */}
           <div className="flex items-center gap-3">
-            <Link href="/" className="group flex items-center gap-2.5 focus:outline-none">
-              <svg
-                width="28"
-                height="28"
-                viewBox="0 0 28 28"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                className="transition-transform duration-300 group-hover:scale-105"
-              >
-                <rect
-                  x="3"
-                  y="6"
-                  width="15"
-                  height="15"
-                  rx="4"
-                  stroke="#888888"
-                  strokeWidth="2.2"
-                />
-                <rect
-                  x="10"
-                  y="3"
-                  width="15"
-                  height="15"
-                  rx="4"
-                  fill="#07080C"
-                  stroke={signalStroke}
-                  strokeWidth="2.4"
-                />
-                <circle cx="17.5" cy="10.5" r="2" fill={signalStroke} />
-              </svg>
-              <div className="flex items-baseline gap-1">
-                <span className="text-lg font-bold tracking-tight text-white">ReelMux</span>
-                <span className="hidden xl:inline-block rounded bg-white/5 px-1.5 py-0.5 text-[10px] font-medium text-zinc-400 border border-white/10">
-                  .com
-                </span>
-              </div>
-            </Link>
+            <BrandLogo href="/" showDomainBadge />
           </div>
 
           {/* B. Center Pill Menu (FrameMux 7-Item Navigation Bar) */}

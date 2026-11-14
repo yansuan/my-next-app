@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { Zap, ShieldCheck, Lock } from "lucide-react";
 import { TOOLS_CATALOG, MODELS_CATALOG, AI_EFFECTS_CATALOG } from "@/lib/catalog/models";
+import { ReelMuxMark } from "@/components/brand/BrandLogo";
 
 const COMPARE_SEO_LINKS = [
   { label: "Seedance 2.5 vs Kling 4.0", href: "/compare/seedance-2.5-vs-kling-4.0" },
@@ -168,6 +169,11 @@ export function Footer() {
                   </Link>
                 </li>
                 <li>
+                  <Link href="/admin" className="hover:text-[#D4FF00] transition-colors">
+                    Admin Console
+                  </Link>
+                </li>
+                <li>
                   <Link href="/legal/terms" className="hover:text-white transition-colors">
                     Terms of Service
                   </Link>
@@ -193,7 +199,8 @@ export function Footer() {
 
           {/* Bottom Copyright */}
           <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-8 text-xs sm:flex-row">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
+              <ReelMuxMark size={22} />
               <span className="font-bold text-white">ReelMux</span>
               <span>·</span>
               <span>One credit balance for every flagship AI model.</span>

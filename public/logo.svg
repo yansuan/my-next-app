@@ -1,0 +1,7 @@
+<svg width="180" height="44" viewBox="0 0 180 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="2" y="4" width="36" height="36" rx="9" fill="#D4FF00"/>
+  <rect x="8.5" y="10.5" width="16.5" height="16.5" rx="4" stroke="#06070A" stroke-width="2.6"/>
+  <rect x="15" y="17" width="16.5" height="16.5" rx="4" fill="#D4FF00" stroke="#06070A" stroke-width="2.6"/>
+  <path d="M21.2 22.1L26.2 25.25L21.2 28.4V22.1Z" fill="#06070A"/>
+  <text x="48" y="29" fill="#FFFFFF" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="24" font-weight="800" letter-spacing="-0.03em">ReelMux</text>
+</svg>
