@@ -68,10 +68,48 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const { userEmail } = useWallet();
 
   const currentLabel = BREADCRUMB_LABELS[pathname] || "Overview";
-  const adminEmail =
-    userEmail && userEmail !== "creator@reelmux.com"
-      ? userEmail
-      : "firefish.a6@gmail.com";
+  const [customAdminName, setCustomAdminName] = React.useState<string>("admin@reelmux.com");
+  const [editingAdminName, setEditingAdminName] = React.useState(false);
+  const [draftAdminName, setDraftAdminName] = React.useState("admin@reelmux.com");
+
+  React.useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem("reelmux_admin_username");
+      if (saved && saved.trim()) {
+        setCustomAdminName(saved.trim());
+        setDraftAdminName(saved.trim());
+      } else if (
+        userEmail &&
+        userEmail !== "creator@reelmux.com" &&
+        !userEmail.includes("firefish")
+      ) {
+        setCustomAdminName(userEmail);
+        setDraftAdminName(userEmail);
+      }
+    } catch {
+      // ignore storage errors
+    }
+  }, [userEmail]);
+
+  const saveAdminName = async () => {
+    const clean = draftAdminName.trim() || "admin@reelmux.com";
+    setCustomAdminName(clean);
+    setEditingAdminName(false);
+    try {
+      window.localStorage.setItem("reelmux_admin_username", clean);
+      await fetch("/api/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "update_admin_profile",
+          newAdminName: clean,
+          actorEmail: clean,
+        }),
+      });
+    } catch {
+      // ignore network error
+    }
+  };
 
   return (
     <div className="flex min-h-screen bg-[#08090C] text-zinc-100">
@@ -151,7 +189,54 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <span className="text-zinc-600">/</span>
             <span className="font-medium text-zinc-200">{currentLabel}</span>
           </div>
-          <div className="font-mono text-xs text-zinc-400">{adminEmail}</div>
+          <div className="flex items-center gap-2">
+            {editingAdminName ? (
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="text"
+                  value={draftAdminName}
+                  onChange={(e) => setDraftAdminName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") saveAdminName();
+                    if (e.key === "Escape") setEditingAdminName(false);
+                  }}
+                  placeholder="admin@reelmux.com"
+                  className="w-48 rounded-md border border-[#D4FF00]/50 bg-[#0B0C10] px-2.5 py-1 font-mono text-xs text-white focus:outline-none"
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={saveAdminName}
+                  className="rounded-md bg-[#D4FF00] px-2.5 py-1 text-[11px] font-bold text-black hover:bg-[#e2ff4d] cursor-pointer"
+                >
+                  Save
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingAdminName(false)}
+                  className="rounded-md border border-white/10 px-2 py-1 text-[11px] text-zinc-400 hover:text-white cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setDraftAdminName(customAdminName);
+                  setEditingAdminName(true);
+                }}
+                title="Click to change admin username / email"
+                className="group inline-flex items-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-1 font-mono text-xs text-zinc-200 hover:border-[#D4FF00]/40 hover:text-white cursor-pointer transition-colors"
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                <span>{customAdminName}</span>
+                <span className="text-[10px] text-zinc-500 group-hover:text-[#D4FF00]">
+                  Edit
+                </span>
+              </button>
+            )}
+          </div>
         </header>
 
         {/* Page Content */}

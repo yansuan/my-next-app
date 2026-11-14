@@ -56,8 +56,28 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const store = getAdminStore();
   const body = await req.json();
-  const { action, actorEmail = "firefish.a6@gmail.com" } = body;
+  const { action, actorEmail = "admin@reelmux.com" } = body;
   const nowStr = new Date().toISOString().replace("T", " ").slice(0, 16) + " UTC";
+
+  if (action === "update_admin_profile") {
+    const cleanName = String(body.newAdminName || "admin@reelmux.com").trim();
+    const adminUser = store.users.find((u) => u.id === "usr-001");
+    if (adminUser) {
+      adminUser.email = cleanName.includes("@") ? cleanName : `${cleanName}@reelmux.com`;
+      adminUser.displayName = `${cleanName} (Admin)`;
+    }
+    store.auditLogs.unshift({
+      id: `aud-${Date.now()}`,
+      actorEmail: cleanName,
+      action: "admin.profile.updated",
+      targetType: "user",
+      targetId: cleanName,
+      summary: `Updated admin console operator username/identity to ${cleanName}.`,
+      ipAddress: "103.149.28.11",
+      createdAt: nowStr,
+    });
+    return NextResponse.json({ ok: true, adminName: cleanName });
+  }
 
   if (action === "block_abuse_signal") {
     const { clusterId } = body;

@@ -48,7 +48,7 @@ export default function AuthPage() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanEmail = email.trim() || "firefish.a6@gmail.com";
+    const cleanEmail = email.trim() || "admin@reelmux.com";
     signInDemo(cleanEmail);
 
     const supabase = createSupabaseBrowserClient();

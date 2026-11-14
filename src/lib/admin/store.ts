@@ -332,8 +332,8 @@ const INITIAL_ABUSE_CLUSTERS: AbuseCluster[] = [
 const INITIAL_USERS: AdminUserRecord[] = [
   {
     id: "usr-001",
-    email: "firefish.a6@gmail.com",
-    displayName: "Firefish Studio (Admin)",
+    email: "admin@reelmux.com",
+    displayName: "ReelMux Admin",
     planTier: "studio",
     balanceAvailable: 14820,
     balanceReserved: 0,
@@ -504,7 +504,7 @@ const INITIAL_GENERATIONS: AdminGenerationRecord[] = [
   {
     id: "gen-9940",
     upstreamJobId: "job_seedance25_77102b",
-    userEmail: "firefish.a6@gmail.com",
+    userEmail: "admin@reelmux.com",
     toolSlug: "reference-to-video",
     category: "video",
     modelId: "seedance-2.5",
@@ -616,7 +616,7 @@ const INITIAL_UPLOADS: AdminUploadRecord[] = [
   },
   {
     id: "upl-503",
-    userEmail: "firefish.a6@gmail.com",
+    userEmail: "admin@reelmux.com",
     fileName: "tokyo-neon-plate-4k.jpg",
     mimeType: "image/jpeg",
     sizeBytes: 6_412_000,
@@ -644,7 +644,7 @@ const INITIAL_ORDERS: AdminOrderRecord[] = [
   {
     id: "ord-8001",
     orderNo: "RMX-20261114-8001",
-    userEmail: "firefish.a6@gmail.com",
+    userEmail: "admin@reelmux.com",
     itemType: "credit_pack",
     itemName: "Studio Pack (15,000 credits)",
     amountUsd: 169,
@@ -731,7 +731,7 @@ const INITIAL_AUDIT_LOGS: AdminAuditLogRecord[] = [
   },
   {
     id: "aud-104",
-    actorEmail: "firefish.a6@gmail.com",
+    actorEmail: "admin@reelmux.com",
     action: "order.completed",
     targetType: "order",
     targetId: "RMX-20261114-8001",
