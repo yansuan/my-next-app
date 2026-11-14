@@ -144,20 +144,34 @@ export async function createYirJob(payload: YirJobRequest): Promise<YirJobRespon
 
       let res = await sendCreate(requestBody);
 
-      // Auto-adapt if an upstream model requires a specific allowed resolution/duration enum (e.g. bfl/flux-2-max -> "1MP")
-      if (!res.ok && res.status === 400) {
+      // Auto-adapt up to 3 rounds if a model restricts resolution, aspect_ratio, or duration enums
+      for (let attempt = 0; attempt < 3 && !res.ok && res.status === 400; attempt += 1) {
         const errBody = await res.json().catch(() => null);
-        const detail = errBody?.error?.details?.[0];
-        if (detail?.field?.startsWith("parameters.") && Array.isArray(detail.allowed) && detail.allowed[0] !== undefined) {
-          const paramKey = detail.field.replace("parameters.", "");
-          const adjustedParams = {
-            ...(requestBody.parameters as Record<string, unknown>),
-            [paramKey]: detail.allowed[0],
-          };
+        const details = Array.isArray(errBody?.error?.details) ? errBody.error.details : [];
+        let modified = false;
+        const adjustedParams = { ...(requestBody.parameters as Record<string, unknown>) };
+
+        for (const d of details) {
+          if (
+            d?.field?.startsWith("parameters.") &&
+            Array.isArray(d.allowed) &&
+            d.allowed[0] !== undefined
+          ) {
+            const paramKey = d.field.replace("parameters.", "");
+            if (adjustedParams[paramKey] !== d.allowed[0]) {
+              adjustedParams[paramKey] = d.allowed[0];
+              modified = true;
+            }
+          }
+        }
+
+        if (modified) {
           requestBody.parameters = adjustedParams;
           res = await sendCreate(requestBody);
         } else if (errBody?.error?.message) {
           throw new Error(`Yir.ai ${res.status}: ${errBody.error.message}`);
+        } else {
+          break;
         }
       }
 
